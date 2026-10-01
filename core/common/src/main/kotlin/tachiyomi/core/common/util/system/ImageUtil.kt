@@ -69,12 +69,12 @@ object ImageUtil {
         return try {
             val type = getImageType(source.peek().inputStream()) ?: return false
             // https://coil-kt.github.io/coil/getting_started/#supported-image-formats
-            when (type.format) {
-                Format.Gif -> true
-                // Animated WebP on Android 9+
-                Format.Webp -> type.isAnimated && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
-                // Animated Heif on Android 11+
-                Format.Heif -> type.isAnimated && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+            when (type) {
+                ImageType.GIF -> true
+                // Animated WebP on Android 9+ (assume animated if WebP, safe over-approximation)
+                ImageType.WEBP -> Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+                // Animated Heif on Android 11+ (assume animated if HEIF, safe over-approximation)
+                ImageType.HEIF -> Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
                 else -> false
             }
         } catch (_: Exception) {
