@@ -48,19 +48,17 @@ jobs:
 
       - name: Write google-services.json
         if: github.repository == github.event.pull_request.head.repo.full_name
-        uses: DamianReeves/write-file-action@6929a9a6d1807689191dcc8bbe62b54d70a32b42 # v1.3
-        with:
-          path: app/google-services.json
-          contents: ${{ secrets.GOOGLE_SERVICES_JSON }}
-          write-mode: overwrite
+        run: |
+          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
+            echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > app/google-services.json
+          fi
 
       - name: Write client_secrets.json
         if: github.repository == github.event.pull_request.head.repo.full_name
-        uses: DamianReeves/write-file-action@6929a9a6d1807689191dcc8bbe62b54d70a32b42 # v1.3
-        with:
-          path: app/src/main/assets/client_secrets.json
-          contents: ${{ secrets.GOOGLE_CLIENT_SECRETS_JSON }}
-          write-mode: overwrite
+        run: |
+          if [ -n "${{ secrets.GOOGLE_CLIENT_SECRETS_JSON }}" ]; then
+            echo '${{ secrets.GOOGLE_CLIENT_SECRETS_JSON }}' > app/src/main/assets/client_secrets.json
+          fi
 
       - name: Set up gradle
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
@@ -69,12 +67,12 @@ jobs:
         run: ./gradlew spotlessCheck
 
       - name: Build app
-        if: github.repository == github.event.pull_request.head.repo.full_name
-        run: ./gradlew assemblePreview -Pinclude-telemetry -Penable-updater
-
-      - name: Build app
-        if: github.repository != github.event.pull_request.head.repo.full_name
-        run: ./gradlew assemblePreview
+        run: |
+          if [ -f app/google-services.json ]; then
+            ./gradlew assemblePreview -Pinclude-telemetry -Penable-updater
+          else
+            ./gradlew assemblePreview
+          fi
 
       - name: Run unit tests
         id: unit_tests
@@ -87,8 +85,16 @@ jobs:
           name: test-report-${{ github.sha }}
           path: app/build/reports/tests/testReleaseUnitTest
 
-      - name: Sign APK
+      - name: Check signing secrets
+        id: check_signing
         if: github.repository == github.event.pull_request.head.repo.full_name
+        run: |
+          if [ -n "${{ secrets.SIGNING_KEY }}" ]; then
+            echo "has_key=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Sign APK
+        if: steps.check_signing.outputs.has_key == 'true'
         uses: r0adkll/sign-android-release@f30bdd30588842ac76044ecdbd4b6d0e3e813478
         with:
           releaseDirectory: app/build/outputs/apk/preview
@@ -101,7 +107,7 @@ jobs:
 
       - name: Signed File name
         id: signed_filename
-        if: github.repository == github.event.pull_request.head.repo.full_name
+        if: steps.check_signing.outputs.has_key == 'true'
         run: |
           echo "SIGNED_TRAIL=-signed" >> $GITHUB_OUTPUT
 

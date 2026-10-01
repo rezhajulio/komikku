@@ -475,6 +475,12 @@ object SettingsAdvancedScreen : SearchableSettings {
                         chooseColorProfile.launch(arrayOf("*/*"))
                     },
                 ),
+                // KMK -->
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = basePreferences.highQualityRenderer(),
+                    title = stringResource(KMR.strings.pref_high_quality_renderer),
+                ),
+                // KMK <--
             ),
         )
     }

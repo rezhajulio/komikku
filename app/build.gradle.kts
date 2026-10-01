@@ -275,7 +275,12 @@ dependencies {
     implementation(libs.subsamplingscaleimageview) {
         exclude(module = "image-decoder")
     }
-    implementation(libs.image.decoder)
+    // KMK -->
+    // Replaces com.github.tachiyomiorg:image-decoder (conflicting libimagedecoder.so)
+    implementation(libs.mpreg.imagedecoder)
+
+    implementation(projects.webgpuviewer)
+    // KMK <--
 
     // UI libraries
     implementation(libs.material)

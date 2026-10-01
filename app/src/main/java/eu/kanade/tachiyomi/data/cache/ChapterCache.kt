@@ -4,6 +4,7 @@ import android.content.Context
 import android.text.format.Formatter
 import com.jakewharton.disklrucache.DiskLruCache
 import eu.kanade.tachiyomi.source.model.Page
+import eu.kanade.tachiyomi.ui.reader.model.DownloadStream
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.util.storage.DiskUtil
 import eu.kanade.tachiyomi.util.storage.saveTo
@@ -171,8 +172,10 @@ class ChapterCache(
      * @param response http response from page.
      * @throws IOException image error.
      */
+    // KMK -->
     @Throws(IOException::class)
-    fun putImageToCache(imageUrl: String, response: Response) {
+    fun putImageToCache(imageUrl: String, response: Response, live: DownloadStream? = null) {
+        // KMK <--
         // Initialize editor (edits the values for an entry).
         var editor: DiskLruCache.Editor? = null
 
@@ -182,7 +185,24 @@ class ChapterCache(
             editor = diskCache.edit(key) ?: return
 
             // Get OutputStream and write image with Okio.
-            response.body.source().saveTo(editor.newOutputStream(0))
+            // KMK -->
+            if (live == null) {
+                response.body.source().saveTo(editor.newOutputStream(0))
+            } else {
+                live.reserve(response.body.contentLength())
+                response.body.source().use { source ->
+                    editor.newOutputStream(0).use { out ->
+                        val buffer = ByteArray(1 shl 16)
+                        while (true) {
+                            val n = source.read(buffer)
+                            if (n < 0) break
+                            out.write(buffer, 0, n)
+                            live.append(buffer, 0, n)
+                        }
+                    }
+                }
+            }
+            // KMK <--
 
             diskCache.flush()
             editor.commit()

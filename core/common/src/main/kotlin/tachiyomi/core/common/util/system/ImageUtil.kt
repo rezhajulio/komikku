@@ -28,8 +28,6 @@ import eu.kanade.tachiyomi.util.system.GLUtil
 import logcat.LogPriority
 import okio.Buffer
 import okio.BufferedSource
-import tachiyomi.decoder.Format
-import tachiyomi.decoder.ImageDecoder
 import java.io.File
 import java.io.InputStream
 import java.security.SecureRandom
@@ -56,16 +54,7 @@ object ImageUtil {
 
     fun findImageType(stream: InputStream): ImageType? {
         return try {
-            when (getImageType(stream)?.format) {
-                Format.Avif -> ImageType.AVIF
-                Format.Gif -> ImageType.GIF
-                Format.Heif -> ImageType.HEIF
-                Format.Jpeg -> ImageType.JPEG
-                Format.Jxl -> ImageType.JXL
-                Format.Png -> ImageType.PNG
-                Format.Webp -> ImageType.WEBP
-                else -> null
-            }
+            getImageType(stream)
         } catch (_: Exception) {
             null
         }
@@ -80,12 +69,12 @@ object ImageUtil {
         return try {
             val type = getImageType(source.peek().inputStream()) ?: return false
             // https://coil-kt.github.io/coil/getting_started/#supported-image-formats
-            when (type.format) {
-                Format.Gif -> true
-                // Animated WebP on Android 9+
-                Format.Webp -> type.isAnimated && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
-                // Animated Heif on Android 11+
-                Format.Heif -> type.isAnimated && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+            when (type) {
+                ImageType.GIF -> true
+                // Animated WebP on Android 9+ (assume animated if WebP, safe over-approximation)
+                ImageType.WEBP -> Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+                // Animated Heif on Android 11+ (assume animated if HEIF, safe over-approximation)
+                ImageType.HEIF -> Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
                 else -> false
             }
         } catch (_: Exception) {
@@ -93,21 +82,21 @@ object ImageUtil {
         }
     }
 
-    private fun getImageType(stream: InputStream): tachiyomi.decoder.ImageType? {
-        val bytes = ByteArray(32)
-
-        val length = if (stream.markSupported()) {
-            stream.mark(bytes.size)
-            stream.read(bytes, 0, bytes.size).also { stream.reset() }
-        } else {
-            stream.read(bytes, 0, bytes.size)
+    private fun getImageType(stream: InputStream): ImageType? {
+        return try {
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            if (stream.markSupported()) {
+                stream.mark(1024 * 1024)
+            }
+            BitmapFactory.decodeStream(stream, null, options)
+            if (stream.markSupported()) {
+                stream.reset()
+            }
+            val mime = options.outMimeType ?: return null
+            ImageType.entries.find { it.mime.equals(mime, ignoreCase = true) }
+        } catch (_: Exception) {
+            null
         }
-
-        if (length == -1) {
-            return null
-        }
-
-        return ImageDecoder.findType(bytes)
     }
 
     enum class ImageType(val mime: String, val extension: String) {
@@ -115,6 +104,7 @@ object ImageUtil {
         GIF("image/gif", "gif"),
         HEIF("image/heif", "heif"),
         JPEG("image/jpeg", "jpg"),
+        JP2("image/jp2", "jp2"),
         JXL("image/jxl", "jxl"),
         PNG("image/png", "png"),
         WEBP("image/webp", "webp"),
@@ -217,7 +207,8 @@ object ImageUtil {
         viewHeight: Int,
         backgroundContext: Context,
     ): BufferedSource {
-        val imageBitmap = ImageDecoder.newInstance(imageSource.inputStream())?.decode()!!
+        val imageBitmap = BitmapFactory.decodeStream(imageSource.inputStream())
+            ?: throw Exception("Failed to decode image")
         val height = imageBitmap.height
         val width = imageBitmap.width
 
@@ -382,9 +373,7 @@ object ImageUtil {
      * Algorithm for determining what background to accompany a comic/manga page
      */
     fun chooseBackground(context: Context, imageSource: BufferedSource): Drawable {
-        val decoder = ImageDecoder.newInstance(imageSource.inputStream())
-        val image = decoder?.decode()
-        decoder?.recycle()
+        val image = BitmapFactory.decodeStream(imageSource.inputStream())
 
         val whiteColor = Color.WHITE
         if (image == null) return whiteColor.toDrawable()

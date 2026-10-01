@@ -211,6 +211,24 @@ class ReaderPreferences(
     fun archiveReaderMode() = preferenceStore.getInt("archive_reader_mode", ArchiveReaderMode.LOAD_FROM_FILE)
     // SY <--
 
+    // KMK -->
+    fun transitionAnimation() =
+        preferenceStore.getEnum("webgpu_transition_animation", TransitionAnimation.FLIP)
+
+    fun transitionAnimationDual() =
+        preferenceStore.getEnum("webgpu_dual_transition_animation", TransitionAnimation.FLIP)
+
+    fun cutoutMode() = preferenceStore.getEnum("webgpu_cutout_mode", CutoutMode.AVOID)
+
+    fun cutoutModeDual() = preferenceStore.getEnum("webgpu_dual_cutout_mode", CutoutMode.IGNORE)
+
+    fun dualPageView() = preferenceStore.getEnum("pref_dual_page_view", DualPageView.ALWAYS)
+
+    fun continuousMinWidth() = preferenceStore.getInt("webgpu_continuous_minwidth", 100)
+
+    fun continuousGap() = preferenceStore.getInt("webgpu_continuous_gap", 10)
+    // KMK <--
+
     enum class FlashColor {
         BLACK,
         WHITE,
@@ -252,6 +270,35 @@ class ReaderPreferences(
         R3_2(KMR.strings.scale_type_3_2, 2f / 3f),
         R16_9(KMR.strings.scale_type_16_9, 9f / 16f),
         R20_9(KMR.strings.scale_type_20_9, 9f / 20f),
+    }
+
+    enum class TransitionAnimation(val titleRes: StringResource) {
+        BASIC(KMR.strings.transition_animation_basic),
+        FLIP(KMR.strings.transition_animation_flip),
+        FLIP_LEFT(KMR.strings.transition_animation_flip_left),
+        FLIP_RIGHT(KMR.strings.transition_animation_flip_right),
+        STACK_LEFT(KMR.strings.transition_animation_stack_left),
+        STACK_RIGHT(KMR.strings.transition_animation_stack_right),
+        STACK_UP(KMR.strings.transition_animation_stack_up),
+        STACK_DOWN(KMR.strings.transition_animation_stack_down),
+        SPHERE(KMR.strings.transition_animation_sphere),
+        CUBE_INSIDE(KMR.strings.transition_animation_cube_inside),
+        CUBE_OUTSIDE(KMR.strings.transition_animation_cube_outside),
+        FADE(KMR.strings.transition_animation_fade),
+        FADE_WHITE(KMR.strings.transition_animation_fade_white),
+        NONE(KMR.strings.transition_animation_none),
+    }
+
+    enum class CutoutMode(val titleRes: StringResource) {
+        IGNORE(KMR.strings.cutout_mode_ignore),
+        AVOID(KMR.strings.cutout_mode_avoid),
+        SHIFT(KMR.strings.cutout_mode_shift),
+    }
+
+    enum class DualPageView(val titleRes: StringResource) {
+        NEVER(KMR.strings.dual_page_view_never),
+        ALWAYS(KMR.strings.dual_page_view_always),
+        WIDE(KMR.strings.dual_page_view_wide),
     }
     // KMK <--
 
@@ -296,6 +343,13 @@ class ReaderPreferences(
         val zoomWideImagesAllowedList = listOf(
             SubsamplingScaleImageView.SCALE_TYPE_CENTER_INSIDE,
             SubsamplingScaleImageView.SCALE_TYPE_ORIGINAL_SIZE,
+        )
+
+        val ImageScaleTypeWebGpuViewer = listOf(
+            MR.strings.scale_type_fit_screen,
+            MR.strings.scale_type_fit_width,
+            MR.strings.scale_type_fit_height,
+            MR.strings.scale_type_original_size,
         )
         // KMK <--
 

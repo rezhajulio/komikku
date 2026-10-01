@@ -35,6 +35,15 @@ dependencyResolutionManagement {
         mavenCentral()
         google()
         maven(url = "https://www.jitpack.io")
+        // KMK -->
+        // androidx.webgpu isn't on Google's Maven yet - the build :webgpuviewer's upstream uses.
+        exclusiveContent {
+            forRepository {
+                maven(url = "https://raw.githubusercontent.com/mpreg-ca/androidx-webgpu-repo/main")
+            }
+            filter { includeGroup("androidx.webgpu") }
+        }
+        // KMK <--
     }
 }
 
@@ -55,6 +64,9 @@ include(":flagkit")
 // SY -->
 include(":i18n-sy")
 // SY <--
+// KMK -->
+include(":webgpuviewer")
+// KMK <--
 include(":macrobenchmark")
 include(":presentation-core")
 include(":presentation-widget")
