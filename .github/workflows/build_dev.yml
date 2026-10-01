@@ -1,0 +1,65 @@
+name: Dev Build
+# Build a dev APK on every push to the dev branch and publish it
+# to a rolling "dev" prerelease.
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - '**'
+      - '!**.md'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build dev APK
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5.4.0
+        with:
+          java-version-file: .github/.java-version
+          distribution: temurin
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
+
+      - name: Build dev APK
+        run: ./gradlew assembleDebug -Pdisable-code-shrink
+
+      - name: Rename APKs
+        run: |
+          set -e
+          cd app/build/outputs/apk/debug
+          mv app-universal-debug.apk Komikku-dev-universal.apk
+          mv app-arm64-v8a-debug.apk Komikku-dev-arm64-v8a.apk
+          mv app-armeabi-v7a-debug.apk Komikku-dev-armeabi-v7a.apk
+          mv app-x86-debug.apk Komikku-dev-x86.apk
+          mv app-x86_64-debug.apk Komikku-dev-x86_64.apk
+
+      - name: Publish dev release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          # Replace the previous rolling dev release, if any
+          gh release delete dev --yes >/dev/null 2>&1 || true
+          git push origin :refs/tags/dev >/dev/null 2>&1 || true
+          gh release create dev \
+            --prerelease \
+            --title "Komikku Dev Build" \
+            --notes "Automated dev build from the dev branch (commit ${{ github.sha }}). Signed with the debug key - uninstall any release-signed Komikku before installing, Android rejects signature mismatches." \
+            app/build/outputs/apk/debug/Komikku-dev-*.apk
