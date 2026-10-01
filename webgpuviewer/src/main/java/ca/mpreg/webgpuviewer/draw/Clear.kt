@@ -23,9 +23,9 @@ fun Draw.clear(encoder: GPUCommandEncoder, texture: GPUTexture, color: Int) {
                     view = targetView,
                     loadOp = LoadOp.Clear,
                     storeOp = StoreOp.Store,
-                    clearValue = GPUColor(r, g, b, a)
-                )
-            )
-        )
+                    clearValue = GPUColor(r, g, b, a),
+                ),
+            ),
+        ),
     ).endAndRelease(targetView)
 }

@@ -18,7 +18,9 @@ internal object NormalMotionDurationScale : MotionDurationScale {
 }
 
 suspend fun AwaitPointerEventScope.waitForCleanUp(
-    pointerId: PointerId, timeout: Long, touchSlop: Float
+    pointerId: PointerId,
+    timeout: Long,
+    touchSlop: Float,
 ): PointerEvent? = try {
     withTimeout(timeout) {
         var acc = Offset.Zero

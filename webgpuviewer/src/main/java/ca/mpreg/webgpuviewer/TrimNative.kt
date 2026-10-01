@@ -40,7 +40,7 @@ object TrimNative {
         height: Int,
         colors: FloatArray,
         threshold: Float,
-        outBounds: IntArray
+        outBounds: IntArray,
     ): Boolean
 
     /** Background colour sampled from the image edges, as 0xAARRGGBB. */
@@ -48,6 +48,6 @@ object TrimNative {
         pixels: ByteBuffer,
         width: Int,
         height: Int,
-        threshold: Float
+        threshold: Float,
     ): Int
 }

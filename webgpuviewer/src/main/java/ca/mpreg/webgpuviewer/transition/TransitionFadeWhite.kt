@@ -43,18 +43,20 @@ object TransitionFadeWhite : Transition() {
     private val fadeWhitePipelines = FormatKeyed { format ->
         val device = WebGpuRenderer.device
         val shaderModule = device.createShaderModule(
-            GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(FADE_WHITE_SHADER))
+            GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(FADE_WHITE_SHADER)),
         )
         device.createRenderPipeline(
             GPURenderPipelineDescriptor(
                 vertex = GPUVertexState(shaderModule, entryPoint = "vs_main"),
                 fragment = GPUFragmentState(
-                    shaderModule, entryPoint = "fs_main", targets = arrayOf(
-                        GPUColorTargetState(format = format)
-                    )
+                    shaderModule,
+                    entryPoint = "fs_main",
+                    targets = arrayOf(
+                        GPUColorTargetState(format = format),
+                    ),
                 ),
                 primitive = GPUPrimitiveState(topology = TriangleList),
-            )
+            ),
         )
     }
 
@@ -83,11 +85,11 @@ fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
         vec2<f32>(0.0, 1.0),
         vec2<f32>(1.0, 1.0)
     );
-    
+
     let pos = positions[vertex_index];
     let ndc_x = pos.x * 2.0 - 1.0;
     let ndc_y = 1.0 - pos.y * 2.0;
-    
+
     var out: VertexOutput;
     out.position = vec4<f32>(ndc_x, ndc_y, 0.0, 1.0);
     out.uv = pos;
@@ -135,7 +137,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         dst: GPUTexture,
         cachedView: GPUTextureView?,
         bg: Int,
-        fade: Float
+        fade: Float,
     ) {
         if (cachedView == null) return
 
@@ -149,7 +151,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         byteBuffer.flip()
 
         val uniformBuffer = WebGpuRenderer.device.createBuffer(
-            GPUBufferDescriptor(size = 32, usage = BufferUsage.Uniform or BufferUsage.CopyDst)
+            GPUBufferDescriptor(size = 32, usage = BufferUsage.Uniform or BufferUsage.CopyDst),
         )
         WebGpuRenderer.device.queue.writeBuffer(uniformBuffer, 0, byteBuffer)
 
@@ -161,25 +163,26 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                         view = targetView,
                         loadOp = LoadOp.Clear,
                         storeOp = StoreOp.Store,
-                        clearValue = GPUColor(1.0, 1.0, 1.0, 1.0)
-                    )
-                )
-            )
+                        clearValue = GPUColor(1.0, 1.0, 1.0, 1.0),
+                    ),
+                ),
+            ),
         )
 
         val fadeWhitePipeline = fadeWhitePipelines[dst.format]
         pass.setPipeline(fadeWhitePipeline)
         pass.setTransientBindGroup(
-            0, WebGpuRenderer.device.createBindGroup(
+            0,
+            WebGpuRenderer.device.createBindGroup(
                 GPUBindGroupDescriptor(
                     layout = fadeWhitePipeline.groupLayout(),
                     entries = arrayOf(
                         GPUBindGroupEntry(0, buffer = uniformBuffer),
                         GPUBindGroupEntry(1, textureView = cachedView),
-                        GPUBindGroupEntry(2, sampler = fadeWhiteSampler)
-                    )
-                )
-            )
+                        GPUBindGroupEntry(2, sampler = fadeWhiteSampler),
+                    ),
+                ),
+            ),
         )
         pass.draw(6)
         pass.endAndRelease(targetView, uniformBuffer)

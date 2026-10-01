@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
@@ -27,7 +28,6 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import android.graphics.Color
 import java.io.File
 
 /**

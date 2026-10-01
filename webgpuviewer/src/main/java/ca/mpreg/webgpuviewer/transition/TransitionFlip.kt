@@ -99,7 +99,7 @@ object TransitionFlip : Transition() {
 
     private val flipSampler by lazy {
         device.createSampler(
-            GPUSamplerDescriptor(magFilter = FilterMode.Linear, minFilter = FilterMode.Linear)
+            GPUSamplerDescriptor(magFilter = FilterMode.Linear, minFilter = FilterMode.Linear),
         )
     }
 
@@ -160,10 +160,10 @@ object TransitionFlip : Transition() {
                     GPUBindGroupLayoutEntry(
                         binding = 0,
                         visibility = ShaderStage.Vertex or ShaderStage.Fragment,
-                        buffer = GPUBufferBindingLayout(type = BufferBindingType.Uniform)
-                    )
-                )
-            )
+                        buffer = GPUBufferBindingLayout(type = BufferBindingType.Uniform),
+                    ),
+                ),
+            ),
         )
     }
 
@@ -180,28 +180,31 @@ object TransitionFlip : Transition() {
      */
     private val punchPipelines = FormatKeyed { format ->
         val shaderModule = device.createShaderModule(
-            GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(code))
+            GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(code)),
         )
         val zero = GPUBlendComponent(
             srcFactor = BlendFactor.Zero,
             dstFactor = BlendFactor.Zero,
-            operation = BlendOperation.Add
+            operation = BlendOperation.Add,
         )
         device.createRenderPipeline(
             GPURenderPipelineDescriptor(
                 layout = device.createPipelineLayout(
-                    GPUPipelineLayoutDescriptor(bindGroupLayouts = arrayOf(punchBindGroupLayout))
+                    GPUPipelineLayoutDescriptor(bindGroupLayouts = arrayOf(punchBindGroupLayout)),
                 ),
                 vertex = GPUVertexState(shaderModule, entryPoint = "vs_main"),
                 fragment = GPUFragmentState(
-                    shaderModule, entryPoint = "fs_punch", targets = arrayOf(
+                    shaderModule,
+                    entryPoint = "fs_punch",
+                    targets = arrayOf(
                         GPUColorTargetState(
-                            format = format, blend = GPUBlendState(color = zero, alpha = zero)
-                        )
-                    )
+                            format = format,
+                            blend = GPUBlendState(color = zero, alpha = zero),
+                        ),
+                    ),
                 ),
                 primitive = GPUPrimitiveState(topology = TriangleList),
-            )
+            ),
         )
     }
 
@@ -267,10 +270,10 @@ object TransitionFlip : Transition() {
                         view = targetView,
                         loadOp = LoadOp.Load,
                         storeOp = StoreOp.Store,
-                        clearValue = GPUColor(0.0, 0.0, 0.0, 0.0)
-                    )
-                )
-            )
+                        clearValue = GPUColor(0.0, 0.0, 0.0, 0.0),
+                    ),
+                ),
+            ),
         )
         try {
             val blank = blankAlpha(page1, page2)
@@ -331,7 +334,7 @@ object TransitionFlip : Transition() {
         // with neither there the halves that stay put do it - otherwise nothing turns at all.
         val sized = rawFront ?: rawBack ?: page1.leafRect(dst, left = forward) ?: page2.leafRect(
             dst,
-            left = !forward
+            left = !forward,
         ) ?: return null
         val frontRect = if (rawFront != null) rawFront else mirror(sized, spine)
         val backRect = rawBack ?: mirror(frontRect, spine)
@@ -377,14 +380,18 @@ object TransitionFlip : Transition() {
      * always counts as uncovered.
      */
     private fun sidePokesOut(
-        big: ImagePage, small: ImagePage, dst: GPUTexture, left: Boolean
+        big: ImagePage,
+        small: ImagePage,
+        dst: GPUTexture,
+        left: Boolean,
     ): Boolean {
         val bigRect = big.leafRect(dst, left) ?: return true
         val smallRect = small.leafRect(dst, left) ?: return true
         fun span(rect: FloatArray, i: Int) = rect[i + 2] - rect[i]
         fun bigger(a: Float, b: Float) = a > b + 1e-4f
         return bigger(span(bigRect, 0), span(smallRect, 0)) || bigger(
-            span(bigRect, 1), span(smallRect, 1)
+            span(bigRect, 1),
+            span(smallRect, 1),
         )
     }
 
@@ -417,8 +424,9 @@ object TransitionFlip : Transition() {
 
         val uniformBuffer = device.createBuffer(
             GPUBufferDescriptor(
-                size = UNIFORM_SIZE.toLong(), usage = BufferUsage.Uniform or BufferUsage.CopyDst
-            )
+                size = UNIFORM_SIZE.toLong(),
+                usage = BufferUsage.Uniform or BufferUsage.CopyDst,
+            ),
         )
         device.queue.writeBuffer(uniformBuffer, 0, byteBuffer)
         return uniformBuffer
@@ -434,16 +442,18 @@ object TransitionFlip : Transition() {
     ) {
         pass.setPipeline(pipeline)
         pass.setTransientBindGroup(
-            0, device.createBindGroup(
+            0,
+            device.createBindGroup(
                 GPUBindGroupDescriptor(
-                    layout = pipeline.groupLayout(), entries = arrayOf(
+                    layout = pipeline.groupLayout(),
+                    entries = arrayOf(
                         GPUBindGroupEntry(0, buffer = uniforms),
                         GPUBindGroupEntry(1, textureView = front),
                         GPUBindGroupEntry(2, textureView = back),
                         GPUBindGroupEntry(3, sampler = flipSampler),
-                    )
-                )
-            )
+                    ),
+                ),
+            ),
         )
     }
 
@@ -451,12 +461,13 @@ object TransitionFlip : Transition() {
     private fun cut(pass: GPURenderPassEncoder, format: Int, uniforms: GPUBuffer) {
         pass.setPipeline(punchPipelines[format])
         pass.setTransientBindGroup(
-            0, device.createBindGroup(
+            0,
+            device.createBindGroup(
                 GPUBindGroupDescriptor(
                     layout = punchBindGroupLayout,
-                    entries = arrayOf(GPUBindGroupEntry(0, buffer = uniforms))
-                )
-            )
+                    entries = arrayOf(GPUBindGroupEntry(0, buffer = uniforms)),
+                ),
+            ),
         )
         pass.draw(SHEET_VERTICES, 1, SHEET_VERTICES)
     }

@@ -28,11 +28,11 @@ private val pipelines = FormatKeyed { format ->
             GPUComputeState(
                 device.createShaderModule(
                     GPUShaderModuleDescriptor(
-                        shaderSourceWGSL = GPUShaderSourceWGSL(lineShader(format))
-                    )
-                )
-            )
-        )
+                        shaderSourceWGSL = GPUShaderSourceWGSL(lineShader(format)),
+                    ),
+                ),
+            ),
+        ),
     )
 }
 
@@ -82,7 +82,7 @@ fun Draw.line(
     x2: Float,
     y2: Float,
     color: Int,
-    thickness: Float
+    thickness: Float,
 ) {
     val r = ((color shr 16) and 0xFF) / 255f
     val g = ((color shr 8) and 0xFF) / 255f
@@ -117,14 +117,16 @@ fun Draw.line(
     val pipeline = pipelines[texture.format]
     pass.setPipeline(pipeline)
     pass.setTransientBindGroup(
-        0, device.createBindGroup(
+        0,
+        device.createBindGroup(
             GPUBindGroupDescriptor(
-                layout = pipeline.groupLayout(), entries = arrayOf(
+                layout = pipeline.groupLayout(),
+                entries = arrayOf(
                     GPUBindGroupEntry(0, textureView = targetView),
                     GPUBindGroupEntry(1, buffer = uniformBuffer),
-                )
-            )
-        )
+                ),
+            ),
+        ),
     )
     pass.dispatchWorkgroups(dispatchW, dispatchH)
     pass.endAndRelease(targetView)

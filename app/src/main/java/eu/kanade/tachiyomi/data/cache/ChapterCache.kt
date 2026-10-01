@@ -172,8 +172,8 @@ class ChapterCache(
      * @param response http response from page.
      * @throws IOException image error.
      */
-    @Throws(IOException::class)
     // KMK -->
+    @Throws(IOException::class)
     fun putImageToCache(imageUrl: String, response: Response, live: DownloadStream? = null) {
         // KMK <--
         // Initialize editor (edits the values for an entry).

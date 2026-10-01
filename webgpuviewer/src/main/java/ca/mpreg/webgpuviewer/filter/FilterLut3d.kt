@@ -99,8 +99,10 @@ class FilterLut3d(lut: Lut3d? = null) : FilterFullscreen() {
     private val uniforms: GPUBuffer by lazy {
         device.createBuffer(
             GPUBufferDescriptor(
-                label = label, size = 16, usage = BufferUsage.Uniform or BufferUsage.CopyDst
-            )
+                label = label,
+                size = 16,
+                usage = BufferUsage.Uniform or BufferUsage.CopyDst,
+            ),
         )
     }
 
@@ -113,7 +115,7 @@ class FilterLut3d(lut: Lut3d? = null) : FilterFullscreen() {
                 addressModeU = AddressMode.ClampToEdge,
                 addressModeV = AddressMode.ClampToEdge,
                 addressModeW = AddressMode.ClampToEdge,
-            )
+            ),
         )
     }
 
@@ -165,9 +167,9 @@ class FilterLut3d(lut: Lut3d? = null) : FilterFullscreen() {
                     usage = TextureUsage.TextureBinding or TextureUsage.CopyDst,
                     // Compat mode pins a texture to one view dimension; say which up front.
                     textureBindingViewDimension = GPUTextureBindingViewDimension(
-                        TextureViewDimension._3D
+                        TextureViewDimension._3D,
                     ),
-                )
+                ),
             )
             view = texture!!.createView()
             lutSize = lut.size
@@ -190,8 +192,9 @@ class FilterLut3d(lut: Lut3d? = null) : FilterFullscreen() {
             bytes,
             GPUExtent3D(lut.size, lut.size, lut.size),
             GPUTexelCopyBufferLayout(
-                bytesPerRow = lut.size * 8, rowsPerImage = lut.size
-            )
+                bytesPerRow = lut.size * 8,
+                rowsPerImage = lut.size,
+            ),
         )
 
         // The bind group holds the old view when the table changed size.
@@ -231,9 +234,9 @@ class FilterLut3d(lut: Lut3d? = null) : FilterFullscreen() {
             }
 
             val rounded = magnitude + 0x1000
-            if (rounded >= 0x47800000) return (sign or 0x7bff).toShort()   // saturate to 65504
+            if (rounded >= 0x47800000) return (sign or 0x7bff).toShort() // saturate to 65504
             if (rounded >= 0x38800000) return (sign or ((rounded - 0x38000000) ushr 13)).toShort()
-            if (magnitude < 0x33000000) return sign.toShort()              // rounds to zero
+            if (magnitude < 0x33000000) return sign.toShort() // rounds to zero
 
             // Subnormal: shift the implicit one back in by hand.
             val exponent = magnitude ushr 23

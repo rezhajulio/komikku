@@ -15,13 +15,17 @@ open class ImageView(
     isReversed: Boolean = false,
 ) : AbstractComposeView(context, attrs) {
     constructor(context: Context, attrs: AttributeSet? = null) : this(
-        context, attrs, context.obtainStyledAttributes(
-            attrs, intArrayOf(android.R.attr.orientation)
+        context,
+        attrs,
+        context.obtainStyledAttributes(
+            attrs,
+            intArrayOf(android.R.attr.orientation),
         ).let {
             val orientation = it.getInt(0, 0)
             it.recycle()
             orientation == 1
-        })
+        },
+    )
 
     open val state: ImageViewerState by lazy { ImageViewerState(isVertical, isReversed) }
 

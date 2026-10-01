@@ -134,7 +134,7 @@ class Font private constructor(
         val rasterizer = rasterizer ?: return null
         val glyph = addGlyph(
             rasterizer,
-            rasterizeGlyph(rasterizer.paint, codepoint, rasterizer.rasterSize, rasterizer.padding)
+            rasterizeGlyph(rasterizer.paint, codepoint, rasterizer.rasterSize, rasterizer.padding),
         )
         glyphs[codepoint] = glyph
         return glyph
@@ -163,11 +163,14 @@ class Font private constructor(
         blitTile(r.pixels, atlasWidth, tile, raster.width, raster.height, originX, originY)
         device.queue.writeTexture(
             dataLayout = GPUTexelCopyBufferLayout(
-                offset = 0L, bytesPerRow = raster.width * 4, rowsPerImage = raster.height
+                offset = 0L,
+                bytesPerRow = raster.width * 4,
+                rowsPerImage = raster.height,
             ),
             data = tile.toDirectBuffer(),
             destination = GPUTexelCopyTextureInfo(
-                texture = atlasTexture, origin = GPUOrigin3D(x = originX, y = originY)
+                texture = atlasTexture,
+                origin = GPUOrigin3D(x = originX, y = originY),
             ),
             writeSize = GPUExtent3D(raster.width, raster.height),
         )
@@ -195,7 +198,7 @@ class Font private constructor(
                 row * atlasWidth * 4,
                 newPixels,
                 row * newWidth * 4,
-                atlasWidth * 4
+                atlasWidth * 4,
             )
         }
         r.pixels = newPixels
@@ -210,13 +213,13 @@ class Font private constructor(
                 size = GPUExtent3D(newWidth, newHeight),
                 format = TextureFormat.RGBA8Unorm,
                 usage = TextureUsage.TextureBinding or TextureUsage.CopyDst,
-            )
+            ),
         )
         device.queue.writeTexture(
             dataLayout = GPUTexelCopyBufferLayout(
                 offset = 0L,
                 bytesPerRow = newWidth * 4,
-                rowsPerImage = newHeight
+                rowsPerImage = newHeight,
             ),
             data = r.pixels.toDirectBuffer(),
             destination = GPUTexelCopyTextureInfo(texture = atlasTexture),
@@ -313,7 +316,7 @@ class Font private constructor(
                     size = GPUExtent3D(width, height),
                     format = TextureFormat.RGBA8Unorm,
                     usage = TextureUsage.TextureBinding or TextureUsage.CopyDst,
-                )
+                ),
             )
             device.queue.writeTexture(
                 dataLayout = GPUTexelCopyBufferLayout(
@@ -425,7 +428,7 @@ class Font private constructor(
                     size = GPUExtent3D(atlas.width, atlas.height),
                     format = TextureFormat.RGBA8Unorm,
                     usage = TextureUsage.TextureBinding or TextureUsage.CopyDst,
-                )
+                ),
             )
             device.queue.writeTexture(
                 dataLayout = GPUTexelCopyBufferLayout(
@@ -497,7 +500,7 @@ private fun rasterizeGlyph(
     paint: Paint,
     codepoint: Int,
     rasterSize: Float,
-    padding: Int
+    padding: Int,
 ): GlyphRaster {
     val str = String(Character.toChars(codepoint))
     val advancePx = paint.measureText(str)
@@ -508,7 +511,7 @@ private fun rasterizeGlyph(
     if (bounds.width() <= 0 || bounds.height() <= 0) {
         // No visible ink (e.g. space) - advance only, no quad/mask to build.
         return GlyphRaster(
-            codepoint, 0, 0, BooleanArray(0), advancePx / rasterSize, 0f, 0f, 0f, 0f, false
+            codepoint, 0, 0, BooleanArray(0), advancePx / rasterSize, 0f, 0f, 0f, 0f, false,
         )
     }
 
@@ -572,7 +575,7 @@ private fun blitTile(
     tileWidth: Int,
     tileHeight: Int,
     originX: Int,
-    originY: Int
+    originY: Int,
 ) {
     val rowBytes = tileWidth * 4
     for (row in 0 until tileHeight) {
@@ -661,7 +664,7 @@ private fun chamferDistance(
     mask: BooleanArray,
     width: Int,
     height: Int,
-    seed: Boolean
+    seed: Boolean,
 ): FloatArray {
     val inf = 1e6f
     val dist = FloatArray(width * height) { if (mask[it] == seed) 0f else inf }
@@ -671,68 +674,84 @@ private fun chamferDistance(
     fun at(x: Int, y: Int) =
         if (x in 0 until width && y in 0 until height) dist[y * width + x] else inf
 
-    for (y in 0 until height) for (x in 0 until width) {
-        val i = y * width + x
-        dist[i] = min(
-            dist[i], min(
-                min(at(x - 1, y) + orthogonal, at(x, y - 1) + orthogonal),
-                min(at(x - 1, y - 1) + diagonal, at(x + 1, y - 1) + diagonal)
+    for (y in 0 until height) {
+        for (x in 0 until width) {
+            val i = y * width + x
+            dist[i] = min(
+                dist[i],
+                min(
+                    min(at(x - 1, y) + orthogonal, at(x, y - 1) + orthogonal),
+                    min(at(x - 1, y - 1) + diagonal, at(x + 1, y - 1) + diagonal),
+                ),
             )
-        )
+        }
     }
-    for (y in height - 1 downTo 0) for (x in width - 1 downTo 0) {
-        val i = y * width + x
-        dist[i] = min(
-            dist[i], min(
-                min(at(x + 1, y) + orthogonal, at(x, y + 1) + orthogonal),
-                min(at(x + 1, y + 1) + diagonal, at(x - 1, y + 1) + diagonal)
+    for (y in height - 1 downTo 0) {
+        for (x in width - 1 downTo 0) {
+            val i = y * width + x
+            dist[i] = min(
+                dist[i],
+                min(
+                    min(at(x + 1, y) + orthogonal, at(x, y + 1) + orthogonal),
+                    min(at(x + 1, y + 1) + diagonal, at(x - 1, y + 1) + diagonal),
+                ),
             )
-        )
+        }
     }
     return dist
 }
 
 private val pipelines = FormatKeyed { format ->
     val shaderModule = device.createShaderModule(
-        GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(TEXT_SHADER))
+        GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(TEXT_SHADER)),
     )
     device.createRenderPipeline(
         GPURenderPipelineDescriptor(
             vertex = GPUVertexState(
-                module = shaderModule, entryPoint = "vs_main", buffers = arrayOf(
+                module = shaderModule,
+                entryPoint = "vs_main",
+                buffers = arrayOf(
                     GPUVertexBufferLayout(
                         arrayStride = 32L,
                         stepMode = VertexStepMode.Instance,
                         attributes = arrayOf(
                             GPUVertexAttribute(
-                                format = VertexFormat.Float32x4, offset = 0L, shaderLocation = 0
+                                format = VertexFormat.Float32x4,
+                                offset = 0L,
+                                shaderLocation = 0,
                             ),
                             GPUVertexAttribute(
-                                format = VertexFormat.Float32x4, offset = 16L, shaderLocation = 1
+                                format = VertexFormat.Float32x4,
+                                offset = 16L,
+                                shaderLocation = 1,
                             ),
-                        )
-                    )
-                )
+                        ),
+                    ),
+                ),
             ),
             fragment = GPUFragmentState(
-                module = shaderModule, entryPoint = "fs_main", targets = arrayOf(
+                module = shaderModule,
+                entryPoint = "fs_main",
+                targets = arrayOf(
                     GPUColorTargetState(
-                        format = format, blend = GPUBlendState(
+                        format = format,
+                        blend = GPUBlendState(
                             color = GPUBlendComponent(
                                 srcFactor = BlendFactor.SrcAlpha,
                                 dstFactor = BlendFactor.OneMinusSrcAlpha,
-                                operation = BlendOperation.Add
-                            ), alpha = GPUBlendComponent(
+                                operation = BlendOperation.Add,
+                            ),
+                            alpha = GPUBlendComponent(
                                 srcFactor = BlendFactor.One,
                                 dstFactor = BlendFactor.OneMinusSrcAlpha,
-                                operation = BlendOperation.Add
-                            )
-                        )
-                    )
-                )
+                                operation = BlendOperation.Add,
+                            ),
+                        ),
+                    ),
+                ),
             ),
-            primitive = GPUPrimitiveState(topology = PrimitiveTopology.TriangleList)
-        )
+            primitive = GPUPrimitiveState(topology = PrimitiveTopology.TriangleList),
+        ),
     )
 }
 
@@ -740,7 +759,7 @@ private val pipelines = FormatKeyed { format ->
 // encoded channel triplet still yields a locally-valid signed distance approximation.
 private val sampler by lazy {
     device.createSampler(
-        GPUSamplerDescriptor(magFilter = FilterMode.Linear, minFilter = FilterMode.Linear)
+        GPUSamplerDescriptor(magFilter = FilterMode.Linear, minFilter = FilterMode.Linear),
     )
 }
 
@@ -851,29 +870,31 @@ fun Draw.text(
     val instances = GlyphInstances(text.length)
 
     var penY = y
-    for (rawLine in text.split("\n")) for (line in wrapLine(font, rawLine, size, maxWidth)) {
-        val codepoints = codepointsOf(line)
-        val startX = x - when (align) {
-            TextAlign.Left -> 0f
-            TextAlign.Center -> lineAdvance(font, codepoints) * size / 2f
-            TextAlign.Right -> lineAdvance(font, codepoints) * size
-        }
-
-        var penX = startX
-        var prev = -1
-        for (cp in codepoints) {
-            if (prev >= 0) penX += font.kerning(prev, cp) * size
-            val glyph = font.ensureGlyph(cp)
-            if (glyph != null) {
-                if (glyph.hasQuad) {
-                    addGlyphInstance(instances, font, glyph, penX, penY, size, dstWidth, dstHeight)
-                }
-                penX += glyph.advance * size
+    for (rawLine in text.split("\n")) {
+        for (line in wrapLine(font, rawLine, size, maxWidth)) {
+            val codepoints = codepointsOf(line)
+            val startX = x - when (align) {
+                TextAlign.Left -> 0f
+                TextAlign.Center -> lineAdvance(font, codepoints) * size / 2f
+                TextAlign.Right -> lineAdvance(font, codepoints) * size
             }
-            prev = cp
-        }
 
-        penY += font.lineHeight * size
+            var penX = startX
+            var prev = -1
+            for (cp in codepoints) {
+                if (prev >= 0) penX += font.kerning(prev, cp) * size
+                val glyph = font.ensureGlyph(cp)
+                if (glyph != null) {
+                    if (glyph.hasQuad) {
+                        addGlyphInstance(instances, font, glyph, penX, penY, size, dstWidth, dstHeight)
+                    }
+                    penX += glyph.advance * size
+                }
+                prev = cp
+            }
+
+            penY += font.lineHeight * size
+        }
     }
 
     if (instances.count == 0) return
@@ -1001,12 +1022,18 @@ private class GlyphInstances(glyphs: Int) {
         u1: Float,
         v1: Float,
         u2: Float,
-        v2: Float
+        v2: Float,
     ) {
         if ((count + 1) * 8 > data.size) data = data.copyOf(data.size * 2)
         val i = count * 8
-        data[i] = x1; data[i + 1] = y1; data[i + 2] = x2; data[i + 3] = y2
-        data[i + 4] = u1; data[i + 5] = v1; data[i + 6] = u2; data[i + 7] = v2
+        data[i] = x1
+        data[i + 1] = y1
+        data[i + 2] = x2
+        data[i + 3] = y2
+        data[i + 4] = u1
+        data[i + 5] = v1
+        data[i + 6] = u2
+        data[i + 7] = v2
         count++
     }
 }
@@ -1028,9 +1055,14 @@ private fun addGlyphInstance(
     val y2 = (baselineY - glyph.planeBottom * size) / dstHeight
 
     instances.add(
-        x1, y1, x2, y2,
-        glyph.atlasX.toFloat(), glyph.atlasY.toFloat(),
-        (glyph.atlasX + glyph.atlasW).toFloat(), (glyph.atlasY + glyph.atlasH).toFloat(),
+        x1,
+        y1,
+        x2,
+        y2,
+        glyph.atlasX.toFloat(),
+        glyph.atlasY.toFloat(),
+        (glyph.atlasX + glyph.atlasW).toFloat(),
+        (glyph.atlasY + glyph.atlasH).toFloat(),
     )
 }
 
@@ -1089,7 +1121,7 @@ private fun drawGlyphInstances(
             vertexSize,
             glyphCount,
             color,
-            screenPxRange
+            screenPxRange,
         )
     }
 }
@@ -1107,8 +1139,8 @@ private fun drawGlyphBatch(
     val vertexBuffer = device.createBuffer(
         GPUBufferDescriptor(
             size = vertexSize.toLong(),
-            usage = BufferUsage.Vertex or BufferUsage.CopyDst
-        )
+            usage = BufferUsage.Vertex or BufferUsage.CopyDst,
+        ),
     )
     device.queue.writeBuffer(vertexBuffer, 0, vertexBytes.slice())
 
@@ -1128,7 +1160,7 @@ private fun drawGlyphBatch(
     paramsBytes.putFloat(0f)
     paramsBytes.flip()
     val paramsBuffer = device.createBuffer(
-        GPUBufferDescriptor(size = 32L, usage = BufferUsage.Uniform or BufferUsage.CopyDst)
+        GPUBufferDescriptor(size = 32L, usage = BufferUsage.Uniform or BufferUsage.CopyDst),
     )
     device.queue.writeBuffer(paramsBuffer, 0, paramsBytes.slice())
 
@@ -1136,15 +1168,17 @@ private fun drawGlyphBatch(
     pass.setPipeline(pipeline)
     pass.setVertexBuffer(0, vertexBuffer)
     pass.setTransientBindGroup(
-        0, device.createBindGroup(
+        0,
+        device.createBindGroup(
             GPUBindGroupDescriptor(
-                layout = pipeline.groupLayout(), entries = arrayOf(
+                layout = pipeline.groupLayout(),
+                entries = arrayOf(
                     GPUBindGroupEntry(0, buffer = paramsBuffer),
                     GPUBindGroupEntry(1, textureView = atlasView),
                     GPUBindGroupEntry(2, sampler = sampler),
-                )
-            )
-        )
+                ),
+            ),
+        ),
     )
     pass.draw(6, glyphCount)
     vertexBuffer.close()

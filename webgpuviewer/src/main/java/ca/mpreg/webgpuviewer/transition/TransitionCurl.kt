@@ -68,7 +68,7 @@ object TransitionCurl : Transition() {
 
     private val curlSampler by lazy {
         device.createSampler(
-            GPUSamplerDescriptor(magFilter = FilterMode.Linear, minFilter = FilterMode.Linear)
+            GPUSamplerDescriptor(magFilter = FilterMode.Linear, minFilter = FilterMode.Linear),
         )
     }
 
@@ -133,21 +133,30 @@ object TransitionCurl : Transition() {
             val curl = curl(geometry, aspect, t, frac, aIsPage1, pos1, pos2, dst, gesture)
             val paper = paperColor(pageA)
             val uniforms = uniforms(
-                geometry, curl, aspect, t, mirror, cachedA != null, cachedB != null, paper
+                geometry,
+                curl,
+                aspect,
+                t,
+                mirror,
+                cachedA != null,
+                cachedB != null,
+                paper,
             )
             val pipeline = pipelines[dst.format]
             pass.setPipeline(pipeline)
             pass.setTransientBindGroup(
-                0, device.createBindGroup(
+                0,
+                device.createBindGroup(
                     GPUBindGroupDescriptor(
-                        layout = pipeline.groupLayout(), entries = arrayOf(
+                        layout = pipeline.groupLayout(),
+                        entries = arrayOf(
                             GPUBindGroupEntry(0, buffer = uniforms),
                             GPUBindGroupEntry(1, textureView = viewA),
                             GPUBindGroupEntry(2, textureView = viewB),
                             GPUBindGroupEntry(3, sampler = curlSampler),
-                        )
-                    )
-                )
+                        ),
+                    ),
+                ),
             )
             pass.draw(6)
             uniforms.close()
@@ -371,8 +380,9 @@ object TransitionCurl : Transition() {
 
         val uniformBuffer = device.createBuffer(
             GPUBufferDescriptor(
-                size = UNIFORM_SIZE.toLong(), usage = BufferUsage.Uniform or BufferUsage.CopyDst
-            )
+                size = UNIFORM_SIZE.toLong(),
+                usage = BufferUsage.Uniform or BufferUsage.CopyDst,
+            ),
         )
         device.queue.writeBuffer(uniformBuffer, 0, byteBuffer)
         uniformBuffer

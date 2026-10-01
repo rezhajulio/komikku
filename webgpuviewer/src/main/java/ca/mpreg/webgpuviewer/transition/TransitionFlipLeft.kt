@@ -53,7 +53,7 @@ object TransitionFlipLeft : Transition() {
             GPUSamplerDescriptor(
                 magFilter = FilterMode.Linear,
                 minFilter = FilterMode.Linear,
-            )
+            ),
         )
     }
 
@@ -223,7 +223,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         byteBuffer.flip()
 
         val uniformBuffer = device.createBuffer(
-            GPUBufferDescriptor(size = 32, usage = BufferUsage.Uniform or BufferUsage.CopyDst)
+            GPUBufferDescriptor(size = 32, usage = BufferUsage.Uniform or BufferUsage.CopyDst),
         )
         device.queue.writeBuffer(uniformBuffer, 0, byteBuffer)
 
@@ -235,24 +235,26 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                         view = targetView,
                         loadOp = LoadOp.Load,
                         storeOp = StoreOp.Store,
-                        clearValue = GPUColor(0.0, 0.0, 0.0, 0.0)
-                    )
-                )
-            )
+                        clearValue = GPUColor(0.0, 0.0, 0.0, 0.0),
+                    ),
+                ),
+            ),
         )
 
         val pipeline = pipelines[dst.format]
         pass.setPipeline(pipeline)
         pass.setTransientBindGroup(
-            0, device.createBindGroup(
+            0,
+            device.createBindGroup(
                 GPUBindGroupDescriptor(
-                    layout = pipeline.groupLayout(), entries = arrayOf(
+                    layout = pipeline.groupLayout(),
+                    entries = arrayOf(
                         GPUBindGroupEntry(0, buffer = uniformBuffer),
                         GPUBindGroupEntry(1, textureView = cachedView),
                         GPUBindGroupEntry(2, sampler = foldSampler),
-                    )
-                )
-            )
+                    ),
+                ),
+            ),
         )
 
         pass.draw(3072)

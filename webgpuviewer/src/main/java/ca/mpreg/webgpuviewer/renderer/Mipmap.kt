@@ -57,8 +57,12 @@ class Mipmap(
          * returned once every chunk has landed, so no caller can sample a half-filled texture.
          */
         suspend fun create(
-            pixels: ByteBuffer, width: Int, height: Int, scale: Float, tilesize: Int,
-            format: Int = TextureFormat.RGBA8Unorm
+            pixels: ByteBuffer,
+            width: Int,
+            height: Int,
+            scale: Float,
+            tilesize: Int,
+            format: Int = TextureFormat.RGBA8Unorm,
         ): Mipmap {
             val mipmap = Mipmap(
                 width = width,
@@ -104,7 +108,7 @@ class Mipmap(
                         size = GPUExtent3D(tileWidth, tileHeight),
                         format = format,
                         usage = TextureUsage.TextureBinding or TextureUsage.CopyDst or TextureUsage.RenderAttachment,
-                    )
+                    ),
                 )
                 textures.add(texture)
                 textureViews.add(texture.createView())
@@ -123,7 +127,8 @@ class Mipmap(
                         ),
                         data = pixels,
                         destination = GPUTexelCopyTextureInfo(
-                            texture = texture, origin = GPUOrigin3D(y = row)
+                            texture = texture,
+                            origin = GPUOrigin3D(y = row),
                         ),
                         writeSize = GPUExtent3D(tileWidth, rows),
                     )
@@ -156,7 +161,13 @@ class Mipmap(
     private var cachedQuad: Quad? = null
 
     constructor(texture: GPUTexture, scale: Float, tilesize: Int) : this(
-        texture.width, texture.height, scale, 1, 1, tilesize, texture.format
+        texture.width,
+        texture.height,
+        scale,
+        1,
+        1,
+        tilesize,
+        texture.format,
     ) {
         textures.add(texture)
         val view = texture.createView()
@@ -171,14 +182,20 @@ class Mipmap(
     // A drawable image is painted by the app from ARGB ints, so it is SDR by nature - the draw
     // pipelines read their format off the texture, so 8-bit here needs nothing else.
     constructor(width: Int, height: Int) : this(
-        width, height, 1f, 1, 1, 4096, TextureFormat.RGBA8Unorm
+        width,
+        height,
+        1f,
+        1,
+        1,
+        4096,
+        TextureFormat.RGBA8Unorm,
     ) {
         val texture = device.createTexture(
             GPUTextureDescriptor(
                 size = GPUExtent3D(width, height),
                 format = format,
                 usage = TextureUsage.TextureBinding or TextureUsage.CopyDst or TextureUsage.RenderAttachment or TextureUsage.StorageBinding,
-            )
+            ),
         )
 
         textures.add(texture)
@@ -261,7 +278,10 @@ class Mipmap(
     private fun ceilDiv(a: Int, b: Int) = (a + b - 1) / b
 
     class Quad(
-        val tiles: List<GPUTexture>, val tileViews: List<GPUTextureView>, val x: Int, val y: Int
+        val tiles: List<GPUTexture>,
+        val tileViews: List<GPUTextureView>,
+        val x: Int,
+        val y: Int,
     )
 
     /**
@@ -273,7 +293,7 @@ class Mipmap(
         val view: GPUTextureView,
         val x: Int,
         val y: Int,
-        val uniform: GPUBuffer
+        val uniform: GPUBuffer,
     )
 
     /**
@@ -287,7 +307,7 @@ class Mipmap(
     private fun tileUniformFor(index: Int): GPUBuffer {
         val arr = tileUniforms ?: arrayOfNulls<GPUBuffer>(textures.size).also { tileUniforms = it }
         return arr[index] ?: device.createBuffer(
-            GPUBufferDescriptor(size = 32, usage = BufferUsage.Uniform or BufferUsage.CopyDst)
+            GPUBufferDescriptor(size = 32, usage = BufferUsage.Uniform or BufferUsage.CopyDst),
         ).also { arr[index] = it }
     }
 
@@ -318,8 +338,8 @@ class Mipmap(
                         textureViews[idx],
                         col * tilesize,
                         row * tilesize,
-                        tileUniformFor(idx)
-                    )
+                        tileUniformFor(idx),
+                    ),
                 )
             }
         }
@@ -393,7 +413,7 @@ class Mipmap(
             listOf(t00, t01, t10, t11),
             listOf(v00, v01, v10, v11),
             tX * t00.width,
-            tY * t00.height
+            tY * t00.height,
         )
         lastQuadTX = tX
         lastQuadTY = tY

@@ -36,31 +36,35 @@ private val device get() = WebGpuRenderer.device
 private val pipelines = FormatKeyed { format ->
     val shaderModule = device.createShaderModule(
         GPUShaderModuleDescriptor(
-            shaderSourceWGSL = GPUShaderSourceWGSL(RECT_SHADER)
-        )
+            shaderSourceWGSL = GPUShaderSourceWGSL(RECT_SHADER),
+        ),
     )
     device.createRenderPipeline(
         GPURenderPipelineDescriptor(
             vertex = GPUVertexState(module = shaderModule, entryPoint = "vs_main"),
             fragment = GPUFragmentState(
-                module = shaderModule, entryPoint = "fs_main", targets = arrayOf(
+                module = shaderModule,
+                entryPoint = "fs_main",
+                targets = arrayOf(
                     GPUColorTargetState(
-                        format = format, blend = GPUBlendState(
+                        format = format,
+                        blend = GPUBlendState(
                             color = GPUBlendComponent(
                                 srcFactor = BlendFactor.SrcAlpha,
                                 dstFactor = BlendFactor.OneMinusSrcAlpha,
-                                operation = BlendOperation.Add
-                            ), alpha = GPUBlendComponent(
+                                operation = BlendOperation.Add,
+                            ),
+                            alpha = GPUBlendComponent(
                                 srcFactor = BlendFactor.One,
                                 dstFactor = BlendFactor.OneMinusSrcAlpha,
-                                operation = BlendOperation.Add
-                            )
-                        )
-                    )
-                )
+                                operation = BlendOperation.Add,
+                            ),
+                        ),
+                    ),
+                ),
             ),
-            primitive = GPUPrimitiveState(topology = PrimitiveTopology.TriangleList)
-        )
+            primitive = GPUPrimitiveState(topology = PrimitiveTopology.TriangleList),
+        ),
     )
 }
 
@@ -87,17 +91,17 @@ fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
         vec2<f32>(0.0, 1.0), // Bottom-left
         vec2<f32>(1.0, 1.0)  // Bottom-right
     );
-    
+
     let pos = positions[vertex_index];
-    
+
     // Interpolate between rect bounds (in normalized 0-1 coords stored in params)
     let x = mix(params.rect.x, params.rect.z, pos.x);
     let y = mix(params.rect.y, params.rect.w, pos.y);
-    
+
     // Convert to NDC [-1, 1]
     let ndc_x = x * 2.0 - 1.0;
     let ndc_y = 1.0 - y * 2.0;
-    
+
     var out: VertexOutput;
     out.position = vec4<f32>(ndc_x, ndc_y, 0.0, 1.0);
     return out;
@@ -125,7 +129,7 @@ fun Draw.rect(
     y1: Float,
     x2: Float,
     y2: Float,
-    color: Int
+    color: Int,
 ) {
     val targetView = texture.createView()
     val pass = encoder.beginRenderPass(
@@ -135,10 +139,10 @@ fun Draw.rect(
                     view = targetView,
                     loadOp = LoadOp.Load,
                     storeOp = StoreOp.Store,
-                    clearValue = androidx.webgpu.GPUColor(0.0, 0.0, 0.0, 0.0)
-                )
-            )
-        )
+                    clearValue = androidx.webgpu.GPUColor(0.0, 0.0, 0.0, 0.0),
+                ),
+            ),
+        ),
     )
     rect(pass, texture.format, x1, y1, x2, y2, color)
     pass.endAndRelease(targetView)
@@ -160,7 +164,7 @@ fun Draw.rect(
     y1: Float,
     x2: Float,
     y2: Float,
-    color: Int
+    color: Int,
 ) {
     val r = ((color shr 16) and 0xFF) / 255f
     val g = ((color shr 8) and 0xFF) / 255f
@@ -180,20 +184,22 @@ fun Draw.rect(
     byteBuffer.flip()
 
     val uniformBuffer = device.createBuffer(
-        GPUBufferDescriptor(size = 32L, usage = BufferUsage.Uniform or BufferUsage.CopyDst)
+        GPUBufferDescriptor(size = 32L, usage = BufferUsage.Uniform or BufferUsage.CopyDst),
     )
     device.queue.writeBuffer(uniformBuffer, 0, byteBuffer)
 
     val pipeline = pipelines[format]
     pass.setPipeline(pipeline)
     pass.setTransientBindGroup(
-        0, device.createBindGroup(
+        0,
+        device.createBindGroup(
             GPUBindGroupDescriptor(
-                layout = pipeline.groupLayout(), entries = arrayOf(
-                    GPUBindGroupEntry(0, buffer = uniformBuffer)
-                )
-            )
-        )
+                layout = pipeline.groupLayout(),
+                entries = arrayOf(
+                    GPUBindGroupEntry(0, buffer = uniformBuffer),
+                ),
+            ),
+        ),
     )
     pass.draw(6)
     uniformBuffer.close()

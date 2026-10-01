@@ -76,22 +76,24 @@ class WebGpuRenderer {
 
         val isAvailable: Boolean
             get() = initError == null && !deviceLost &&
-                    ::instance.isInitialized && ::adapter.isInitialized && ::device.isInitialized
+                ::instance.isInitialized && ::adapter.isInitialized && ::device.isInitialized
 
         val unavailableReason: String?
             get() = when {
                 initError != null -> "WebGPU failed to initialize: ${initError?.message}"
                 deviceLost -> "WebGPU device lost"
                 !::instance.isInitialized || !::adapter.isInitialized ||
-                        !::device.isInitialized -> "WebGPU never initialized"
+                    !::device.isInitialized -> "WebGPU never initialized"
 
                 else -> null
             }
 
         fun requireAvailable() {
             check(isAvailable) {
-                "WebGPU not available" + (initError?.let { ": ${it.message}" }
-                    ?: if (deviceLost) ": device lost" else "")
+                "WebGPU not available" + (
+                    initError?.let { ": ${it.message}" }
+                        ?: if (deviceLost) ": device lost" else ""
+                    )
             }
         }
 
@@ -184,7 +186,7 @@ class WebGpuRenderer {
                                 deviceLost = true
                                 Log.e(
                                     "WebGpuRenderer",
-                                    "WebGPU device lost reason=$reason: $message device=$lost"
+                                    "WebGPU device lost reason=$reason: $message device=$lost",
                                 )
                                 if (first) onDeviceLost?.invoke()
                             },
@@ -192,12 +194,12 @@ class WebGpuRenderer {
                             uncapturedErrorCallback = UncapturedErrorCallback { _, type, message ->
                                 Log.e(
                                     "WebGpuRenderer",
-                                    "Uncaptured WebGPU error type=$type: $message"
+                                    "Uncaptured WebGPU error type=$type: $message",
                                 )
                             },
                             uncapturedErrorCallbackExecutor = Executor(Runnable::run),
                             requiredFeatures = @SuppressLint("WrongConstant") requiredFeatures,
-                        )
+                        ),
                     )
                 } catch (e: Throwable) {
                     // Fails soft via initError - a driver init failure shouldn't poison the whole class.
@@ -312,7 +314,7 @@ class WebGpuRenderer {
 
         // A transient layout pass can hand over a near-zero size; [resize] picks it up later.
         if (width < MIN_SURFACE_DIMENSION || height < MIN_SURFACE_DIMENSION) {
-            Log.w("WebGpuRenderer", "surface deferred at undersized ${width}x${height}")
+            Log.w("WebGpuRenderer", "surface deferred at undersized ${width}x$height")
             return
         }
 
@@ -322,9 +324,9 @@ class WebGpuRenderer {
             val created = instance.createSurface(
                 GPUSurfaceDescriptor(
                     surfaceSourceAndroidNativeWindow = GPUSurfaceSourceAndroidNativeWindow(
-                        windowFromSurface(pending).also { acquired -> window = acquired }
-                    )
-                )
+                        windowFromSurface(pending).also { acquired -> window = acquired },
+                    ),
+                ),
             )
             try {
                 created.apply {
@@ -341,8 +343,8 @@ class WebGpuRenderer {
                             this@WebGpuRenderer.width,
                             this@WebGpuRenderer.height,
                             Hdr.frameFormat,
-                            TextureUsage.RenderAttachment
-                        )
+                            TextureUsage.RenderAttachment,
+                        ),
                     )
                     this@WebGpuRenderer.configuredFormat = Hdr.frameFormat
                 }
@@ -412,7 +414,7 @@ class WebGpuRenderer {
             if (!current.status.isSurfaceSuccess() || texture.handle == 0L) {
                 Log.w(
                     "WebGpuRenderer",
-                    "No surface texture: ${SurfaceGetCurrentTextureStatus.toString(current.status)}"
+                    "No surface texture: ${SurfaceGetCurrentTextureStatus.toString(current.status)}",
                 )
                 // Lost needs a new surface: park until one arrives.
                 if (texture.handle != 0L) texture.close()
@@ -452,9 +454,12 @@ class WebGpuRenderer {
             val frameTime = System.nanoTime() - startTime
             recordFrameTime(frameTime)
             Log.d(
-                "WebGpuRenderer", "Frame: %.2fms | Avg: %.2fms | FPS: %.1f".format(
-                    frameTime / 1_000_000f, recentAvgFrameTimeMs, estimatedFps
-                )
+                "WebGpuRenderer",
+                "Frame: %.2fms | Avg: %.2fms | FPS: %.1f".format(
+                    frameTime / 1_000_000f,
+                    recentAvgFrameTimeMs,
+                    estimatedFps,
+                ),
             )
         }
 
@@ -467,8 +472,12 @@ class WebGpuRenderer {
         try {
             surface.configure(
                 GPUSurfaceConfiguration(
-                    device, width, height, Hdr.frameFormat, TextureUsage.RenderAttachment
-                )
+                    device,
+                    width,
+                    height,
+                    Hdr.frameFormat,
+                    TextureUsage.RenderAttachment,
+                ),
             )
             configuredFormat = Hdr.frameFormat
         } catch (e: Exception) {
@@ -518,4 +527,4 @@ class WebGpuRenderer {
 /** Suboptimal still draws - it only asks to be reconfigured eventually. */
 private fun Int.isSurfaceSuccess(): Boolean =
     this == SurfaceGetCurrentTextureStatus.SuccessOptimal ||
-            this == SurfaceGetCurrentTextureStatus.SuccessSuboptimal
+        this == SurfaceGetCurrentTextureStatus.SuccessSuboptimal

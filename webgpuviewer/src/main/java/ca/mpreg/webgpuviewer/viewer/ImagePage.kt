@@ -104,14 +104,18 @@ open class ImagePage {
         // custom Render page's own drawn content can track a drag/pinch the same way an
         // ImageSingle page's would, rather than being stuck rendering at (0, 0, 1) forever.
         override fun drawLive(
-            encoder: GPUCommandEncoder, dst: GPUTexture, tiles: TileRenderer
+            encoder: GPUCommandEncoder,
+            dst: GPUTexture,
+            tiles: TileRenderer,
         ): Boolean {
             renderWith(encoder, x, y, scale, dst)
             return false
         }
 
         override fun renderCacheSeed(
-            encoder: GPUCommandEncoder, tex: GPUTexture, tiles: TileRenderer
+            encoder: GPUCommandEncoder,
+            tex: GPUTexture,
+            tiles: TileRenderer,
         ) {
             renderWith(encoder, x, y, scale, tex)
         }
@@ -125,7 +129,10 @@ open class ImagePage {
             val cx = 0.5f + scale * x
             val cy = 0.5f + scale * y
             return floatArrayOf(
-                cx - halfWidthFrac, cy - halfHeightFrac, cx + halfWidthFrac, cy + halfHeightFrac
+                cx - halfWidthFrac,
+                cy - halfHeightFrac,
+                cx + halfWidthFrac,
+                cy + halfHeightFrac,
             )
         }
 
@@ -140,11 +147,11 @@ open class ImagePage {
         /** Draws this page's content. Use [rect]/[circle]/[text] to draw into the open pass. */
         open fun render(dst: GPUTexture, x: Float, y: Float, scale: Float) {}
 
-        private val _renderVersion = AtomicInteger()
+        private val _frameVersion = AtomicInteger()
 
         /** Bumped by [invalidate], so a page turn sees the drawn content change. */
         override val frameVersion: Int
-            get() = _renderVersion.get()
+            get() = _frameVersion.get()
 
         /**
          * As [ImagePage.invalidate], bumping [frameVersion] so a page turn in flight re-seeds its
@@ -152,7 +159,7 @@ open class ImagePage {
          * otherwise freeze for the length of the turn.
          */
         override fun invalidate() {
-            _renderVersion.incrementAndGet()
+            _frameVersion.incrementAndGet()
             super.invalidate()
         }
 
@@ -180,7 +187,7 @@ open class ImagePage {
                 cy - halfHeightFrac,
                 cx + halfWidthFrac,
                 cy + halfHeightFrac,
-                color
+                color,
             )
         }
 
@@ -213,11 +220,15 @@ open class ImagePage {
             align: TextAlign = TextAlign.Left,
             maxWidth: Float = Float.POSITIVE_INFINITY,
         ) = Draw.text(
-            pass, dst, context, fontFamily, text, x, y, size, color, weight, style, align, maxWidth
+            pass, dst, context, fontFamily, text, x, y, size, color, weight, style, align, maxWidth,
         )
 
         final override fun renderWith(
-            encoder: GPUCommandEncoder, x: Float, y: Float, scale: Float, dst: GPUTexture
+            encoder: GPUCommandEncoder,
+            x: Float,
+            y: Float,
+            scale: Float,
+            dst: GPUTexture,
         ) {
             // Clears and draws in the same pass, rather than a separate clear pass first - see
             // ImagePage.renderWith's default for why that's still needed for a page (like Dummy)
@@ -238,7 +249,11 @@ open class ImagePage {
          * - [ImageViewerContinuousState] clears once up front to guard against that).
          */
         internal fun renderLoaded(
-            encoder: GPUCommandEncoder, x: Float, y: Float, scale: Float, dst: GPUTexture
+            encoder: GPUCommandEncoder,
+            x: Float,
+            y: Float,
+            scale: Float,
+            dst: GPUTexture,
         ) {
             openPassAndRender(encoder, x, y, scale, dst, clear = false)
         }
@@ -261,7 +276,7 @@ open class ImagePage {
             y: Float,
             scale: Float,
             dst: GPUTexture,
-            clear: Boolean
+            clear: Boolean,
         ) {
             val clearValue =
                 backgroundColor?.let { argbToGPUColor(it) } ?: GPUColor(0.0, 0.0, 0.0, 0.0)
@@ -274,10 +289,10 @@ open class ImagePage {
                             view = targetView,
                             loadOp = if (clear) LoadOp.Clear else LoadOp.Load,
                             storeOp = StoreOp.Store,
-                            clearValue = clearValue
-                        )
-                    )
-                )
+                            clearValue = clearValue,
+                        ),
+                    ),
+                ),
             )
             pass = openedPass
             passFormat = dst.format
@@ -377,7 +392,7 @@ open class ImagePage {
          * [ImageViewerContinuousState]) instead of [renderPage].
          */
         internal open fun forEachImage(
-            action: (image: Image, offsetX: Float, imageScale: Float) -> Unit
+            action: (image: Image, offsetX: Float, imageScale: Float) -> Unit,
         ) {
             currentImage?.let { action(it, 0f, 1f) }
         }
@@ -420,9 +435,12 @@ open class ImagePage {
                 var frameIndex = 0
                 while (true) {
                     synchronized(this@ImageSingle) {
-                        if (destroyed) null
-                        else this@ImageSingle.frames?.getOrNull(frameIndex)
-                            ?.also { currentFrameImage = it.first }
+                        if (destroyed) {
+                            null
+                        } else {
+                            this@ImageSingle.frames?.getOrNull(frameIndex)
+                                ?.also { currentFrameImage = it.first }
+                        }
                     }?.let { (_, duration) ->
                         // Keeps running off screen - frames stay in step with their durations,
                         // and invalidate() asks for a redraw only while there is one to ask for.
@@ -436,7 +454,11 @@ open class ImagePage {
         }
 
         override fun renderWith(
-            encoder: GPUCommandEncoder, x: Float, y: Float, scale: Float, dst: GPUTexture
+            encoder: GPUCommandEncoder,
+            x: Float,
+            y: Float,
+            scale: Float,
+            dst: GPUTexture,
         ) {
             // Clears and draws in the same pass, rather than a separate clear pass first. No
             // stencil attachment - this fallback never needs TileRenderer's masking, unlike the
@@ -449,10 +471,10 @@ open class ImagePage {
                             view = targetView,
                             loadOp = LoadOp.Clear,
                             storeOp = StoreOp.Store,
-                            clearValue = GPUColor(0.0, 0.0, 0.0, 0.0)
-                        )
-                    )
-                )
+                            clearValue = GPUColor(0.0, 0.0, 0.0, 0.0),
+                        ),
+                    ),
+                ),
             )
             try {
                 renderPage(pass, dst, x, y, scale, linear = false, masked = false)
@@ -463,7 +485,9 @@ open class ImagePage {
 
         /** Opens a `LoadOp.Clear` pass on [dst], with a stencil attachment for [TileRenderer]'s masking. */
         private fun beginLivePass(
-            encoder: GPUCommandEncoder, dst: GPUTexture, tiles: TileRenderer
+            encoder: GPUCommandEncoder,
+            dst: GPUTexture,
+            tiles: TileRenderer,
         ): GPURenderPassEncoder {
             val targetView = dst.createView()
             // The pass holds its own reference to its attachment, so ours can go at once.
@@ -474,22 +498,23 @@ open class ImagePage {
                             view = targetView,
                             loadOp = LoadOp.Clear,
                             storeOp = StoreOp.Store,
-                            clearValue = GPUColor(0.0, 0.0, 0.0, 0.0)
-                        )
-                    ), depthStencilAttachment = GPURenderPassDepthStencilAttachment(
+                            clearValue = GPUColor(0.0, 0.0, 0.0, 0.0),
+                        ),
+                    ),
+                    depthStencilAttachment = GPURenderPassDepthStencilAttachment(
                         view = tiles.stencilViewFor(dst),
                         stencilLoadOp = LoadOp.Clear,
                         stencilStoreOp = StoreOp.Discard,
                         stencilClearValue = 0,
-                    )
-                )
+                    ),
+                ),
             ).also { targetView.close() }
         }
 
         /** Opens a `LoadOp.Clear` pass on [tex], no stencil attachment - a transition's cache is never masked. */
         private fun beginCachePass(
             encoder: GPUCommandEncoder,
-            tex: GPUTexture
+            tex: GPUTexture,
         ): GPURenderPassEncoder {
             val targetView = tex.createView()
             return encoder.beginRenderPass(
@@ -499,10 +524,10 @@ open class ImagePage {
                             view = targetView,
                             loadOp = LoadOp.Clear,
                             storeOp = StoreOp.Store,
-                            clearValue = GPUColor(0.0, 0.0, 0.0, 0.0)
-                        )
-                    )
-                )
+                            clearValue = GPUColor(0.0, 0.0, 0.0, 0.0),
+                        ),
+                    ),
+                ),
             ).also { targetView.close() }
         }
 
@@ -515,7 +540,9 @@ open class ImagePage {
          * masking) rather than sharing one from the caller - see [Render] for why that split exists.
          */
         override fun drawLive(
-            encoder: GPUCommandEncoder, dst: GPUTexture, tiles: TileRenderer
+            encoder: GPUCommandEncoder,
+            dst: GPUTexture,
+            tiles: TileRenderer,
         ): Boolean {
             if (isAnimated) {
                 val pass = beginLivePass(encoder, dst, tiles)
@@ -542,15 +569,17 @@ open class ImagePage {
                 if (!covered) {
                     renderPage(pass, dst, 0f, 0f, 1f)
                 }
-                if (fade < 1f) fadeRect(dst)?.let {
-                    drawFade(
-                        pass,
-                        dst.format,
-                        it[0],
-                        it[1],
-                        it[2],
-                        it[3]
-                    )
+                if (fade < 1f) {
+                    fadeRect(dst)?.let {
+                        drawFade(
+                            pass,
+                            dst.format,
+                            it[0],
+                            it[1],
+                            it[2],
+                            it[3],
+                        )
+                    }
                 }
                 return covered
             } finally {
@@ -564,7 +593,9 @@ open class ImagePage {
          * cache is never stencil-masked either way).
          */
         override fun renderCacheSeed(
-            encoder: GPUCommandEncoder, tex: GPUTexture, tiles: TileRenderer
+            encoder: GPUCommandEncoder,
+            tex: GPUTexture,
+            tiles: TileRenderer,
         ) {
             if (isAnimated) {
                 val pass = beginCachePass(encoder, tex)
@@ -579,7 +610,7 @@ open class ImagePage {
                                 it[1],
                                 it[2],
                                 it[3],
-                                false
+                                false,
                             )
                         }
                     }
@@ -609,7 +640,7 @@ open class ImagePage {
                             it[1],
                             it[2],
                             it[3],
-                            false
+                            false,
                         )
                     }
                 }
@@ -625,7 +656,7 @@ open class ImagePage {
             encoder: GPUCommandEncoder,
             tex: GPUTexture,
             tiles: TileRenderer,
-            identityMatches: Boolean
+            identityMatches: Boolean,
         ) {
             if (!identityMatches) {
                 renderCacheSeed(encoder, tex, tiles)
@@ -639,10 +670,10 @@ open class ImagePage {
                             view = targetView,
                             loadOp = LoadOp.Load,
                             storeOp = StoreOp.Store,
-                            clearValue = GPUColor(0.0, 0.0, 0.0, 0.0)
-                        )
-                    )
-                )
+                            clearValue = GPUColor(0.0, 0.0, 0.0, 0.0),
+                        ),
+                    ),
+                ),
             )
             try {
                 tiles.blitAvailableTiles(pass, this, tex)
@@ -661,7 +692,10 @@ open class ImagePage {
             get() = currentImage?.backgroundColor
 
         override fun drawBackgroundColumns(
-            pass: GPURenderPassEncoder, dst: GPUTexture, offsetX: Float, offsetY: Float
+            pass: GPURenderPassEncoder,
+            dst: GPUTexture,
+            offsetX: Float,
+            offsetY: Float,
         ) = forEachBackgroundColumn(dst) { color, x1, x2 ->
             Draw.rect(pass, dst.format, offsetX + x1, offsetY, offsetX + x2, offsetY + 1f, color)
         }
@@ -680,7 +714,7 @@ open class ImagePage {
             y: Float,
             scale: Float,
             linear: Boolean = true,
-            masked: Boolean = true
+            masked: Boolean = true,
         ) {
             val variant = RenderPage.variantFor(linear, masked)
             if (!linear || !masked) {
@@ -703,7 +737,11 @@ open class ImagePage {
          * [RenderPage.drawMaskedRect] - since it always runs inside that pass.
          */
         fun renderBackground(
-            pass: GPURenderPassEncoder, dst: GPUTexture, x: Float, y: Float, scale: Float
+            pass: GPURenderPassEncoder,
+            dst: GPUTexture,
+            x: Float,
+            y: Float,
+            scale: Float,
         ) = drawPageBackground(pass, dst, scale, maskedBackground = true)
 
         /**
@@ -744,7 +782,7 @@ open class ImagePage {
                 val pixelsPerUnitY = parent.height.toFloat() * anchorScale
                 return min(
                     boundProximity(this@ImageSingle.x, minX, maxX, pixelsPerUnitX),
-                    boundProximity(this@ImageSingle.y, minY, maxY, pixelsPerUnitY)
+                    boundProximity(this@ImageSingle.y, minY, maxY, pixelsPerUnitY),
                 )
             }
 
@@ -784,7 +822,10 @@ open class ImagePage {
 
         /** Each [forEachBackgroundColumn] column once - they tile, so nothing blends twice. */
         private fun drawPageBackground(
-            pass: GPURenderPassEncoder, dst: GPUTexture, scale: Float, maskedBackground: Boolean
+            pass: GPURenderPassEncoder,
+            dst: GPUTexture,
+            scale: Float,
+            maskedBackground: Boolean,
         ) {
             // Outside forEachPlacedImage's walk, so it needs that guard of its own.
             if (destroyed) return
@@ -799,7 +840,7 @@ open class ImagePage {
             x: Float,
             y: Float,
             scale: Float,
-            action: (image: Image, rect: FloatArray, placeX: Float, placeY: Float, placeScale: Float) -> Unit
+            action: (image: Image, rect: FloatArray, placeX: Float, placeY: Float, placeScale: Float) -> Unit,
         ) {
             // The snapshot is captured on the main thread and drawn later, so the page may have
             // been evicted since - its images' buffers are gone, and touching one throws.
@@ -808,7 +849,7 @@ open class ImagePage {
             forEachImage { img, srcOffsetX, imgScale ->
                 if (img.mipmaps.isNotEmpty()) {
                     val placeX = (this.x + x + srcOffsetX / dst.width + WebGpuRenderer.offsetX) /
-                            imgScale - WebGpuRenderer.offsetX
+                        imgScale - WebGpuRenderer.offsetX
                     val placeY =
                         (this.y + y + WebGpuRenderer.offsetY) / imgScale - WebGpuRenderer.offsetY
                     val placeScale = this.scale * scale * imgScale
@@ -939,7 +980,7 @@ open class ImagePage {
          * has no image to place and paints itself instead - see [drawRenderSides].
          */
         override fun forEachImage(
-            action: (image: Image, offsetX: Float, imageScale: Float) -> Unit
+            action: (image: Image, offsetX: Float, imageScale: Float) -> Unit,
         ) {
             leftSingle?.currentImage?.let { action(it, -0.5f * it.width * leftScale, leftScale) }
             rightSingle?.currentImage?.let { action(it, 0.5f * it.width * rightScale, rightScale) }
@@ -953,7 +994,9 @@ open class ImagePage {
 
         /** As [ImageSingle.drawLive], then each [Render] side on top - see [drawRenderSides]. */
         override fun drawLive(
-            encoder: GPUCommandEncoder, dst: GPUTexture, tiles: TileRenderer
+            encoder: GPUCommandEncoder,
+            dst: GPUTexture,
+            tiles: TileRenderer,
         ): Boolean {
             val covered = super.drawLive(encoder, dst, tiles)
             drawRenderSides(encoder, dst)
@@ -961,7 +1004,9 @@ open class ImagePage {
         }
 
         override fun renderCacheSeed(
-            encoder: GPUCommandEncoder, tex: GPUTexture, tiles: TileRenderer
+            encoder: GPUCommandEncoder,
+            tex: GPUTexture,
+            tiles: TileRenderer,
         ) {
             super.renderCacheSeed(encoder, tex, tiles)
             drawRenderSides(encoder, tex)
@@ -978,7 +1023,9 @@ open class ImagePage {
             this === other || left === other || right === other
 
         override fun attach(
-            parent: ImageViewerState, scope: CoroutineScope?, onInvalidate: () -> Unit
+            parent: ImageViewerState,
+            scope: CoroutineScope?,
+            onInvalidate: () -> Unit,
         ) {
             super.attach(parent, scope, onInvalidate)
             left?.attach(parent, scope, onInvalidate)
@@ -997,7 +1044,7 @@ open class ImagePage {
             encoder: GPUCommandEncoder,
             tex: GPUTexture,
             tiles: TileRenderer,
-            identityMatches: Boolean
+            identityMatches: Boolean,
         ) = super.renderIntoCache(encoder, tex, tiles, identityMatches && !hasRenderSide)
 
         /**
@@ -1022,7 +1069,7 @@ open class ImagePage {
                         (x + offsetX / dst.width) / sideScale,
                         y / sideScale,
                         scale * sideScale,
-                        dst
+                        dst,
                     )
                 }
             }
@@ -1043,7 +1090,7 @@ open class ImagePage {
                         dst,
                         (placeX + WebGpuRenderer.offsetX) / sideScale - WebGpuRenderer.offsetX,
                         (y + WebGpuRenderer.offsetY) / sideScale - WebGpuRenderer.offsetY,
-                        scale * sideScale
+                        scale * sideScale,
                     )
                 }
             }
@@ -1069,7 +1116,10 @@ open class ImagePage {
             val r = leafRect(dst, false)
             if (l == null || r == null) return l ?: r
             return floatArrayOf(
-                min(l[0], r[0]), min(l[1], r[1]), max(l[2], r[2]), max(l[3], r[3])
+                min(l[0], r[0]),
+                min(l[1], r[1]),
+                max(l[2], r[2]),
+                max(l[3], r[3]),
             )
         }
 
@@ -1078,7 +1128,8 @@ open class ImagePage {
 
         /** Each side's own colour over its own half: seam to screen edge, not just its image. */
         override fun forEachBackgroundColumn(
-            dst: GPUTexture, action: (color: Int, x1: Float, x2: Float) -> Unit
+            dst: GPUTexture,
+            action: (color: Int, x1: Float, x2: Float) -> Unit,
         ) {
             val leftColor = left?.backgroundColor
             val rightColor = right?.backgroundColor
@@ -1122,7 +1173,8 @@ open class ImagePage {
         /** Visible height after trim (max of trim heights) */
         override val trimHeight: Int
             get() = max(
-                (left?.trimHeight ?: 0) * leftScale, (right?.trimHeight ?: 0) * rightScale
+                (left?.trimHeight ?: 0) * leftScale,
+                (right?.trimHeight ?: 0) * rightScale,
             ).roundToInt()
 
         override val isHalfWidth: Boolean
@@ -1228,7 +1280,11 @@ open class ImagePage {
      * pass instead of paying for a separate one.
      */
     open fun renderWith(
-        encoder: GPUCommandEncoder, x: Float, y: Float, scale: Float, dst: GPUTexture
+        encoder: GPUCommandEncoder,
+        x: Float,
+        y: Float,
+        scale: Float,
+        dst: GPUTexture,
     ) {
         Draw.clear(encoder, dst, 0)
     }
@@ -1243,7 +1299,9 @@ open class ImagePage {
      * it's safe to prewarm the next page - always false here, since only [Images] has a tile cache.
      */
     internal open fun drawLive(
-        encoder: GPUCommandEncoder, dst: GPUTexture, tiles: TileRenderer
+        encoder: GPUCommandEncoder,
+        dst: GPUTexture,
+        tiles: TileRenderer,
     ): Boolean {
         renderWith(encoder, 0f, 0f, 1f, dst)
         return false
@@ -1255,7 +1313,9 @@ open class ImagePage {
      * Just [renderWith] by default; [Images] overrides this the same way it overrides [drawLive].
      */
     internal open fun renderCacheSeed(
-        encoder: GPUCommandEncoder, tex: GPUTexture, tiles: TileRenderer
+        encoder: GPUCommandEncoder,
+        tex: GPUTexture,
+        tiles: TileRenderer,
     ) {
         renderWith(encoder, 0f, 0f, 1f, tex)
     }
@@ -1277,7 +1337,10 @@ open class ImagePage {
      * layer on top of - [Images] overrides this to blit instead when [identityMatches].
      */
     internal open fun renderIntoCache(
-        encoder: GPUCommandEncoder, tex: GPUTexture, tiles: TileRenderer, identityMatches: Boolean
+        encoder: GPUCommandEncoder,
+        tex: GPUTexture,
+        tiles: TileRenderer,
+        identityMatches: Boolean,
     ) {
         renderCacheSeed(encoder, tex, tiles)
     }
@@ -1299,8 +1362,11 @@ open class ImagePage {
     internal open fun leafRect(dst: GPUTexture, left: Boolean): FloatArray? {
         val r = pageRect(dst) ?: return null
         val mid = (r[0] + r[2]) * 0.5f
-        return if (left) floatArrayOf(r[0], r[1], mid, r[3])
-        else floatArrayOf(mid, r[1], r[2], r[3])
+        return if (left) {
+            floatArrayOf(r[0], r[1], mid, r[3])
+        } else {
+            floatArrayOf(mid, r[1], r[2], r[3])
+        }
     }
 
     /** Where this page's two [leafRect] halves meet - the spine a page flip turns about. */
@@ -1323,7 +1389,8 @@ open class ImagePage {
      * spread gives each side its own, so neither crosses the seam nor leaves the edges bare.
      */
     internal open fun forEachBackgroundColumn(
-        dst: GPUTexture, action: (color: Int, x1: Float, x2: Float) -> Unit
+        dst: GPUTexture,
+        action: (color: Int, x1: Float, x2: Float) -> Unit,
     ) {
         action(backgroundColor ?: return, 0f, 1f)
     }
@@ -1333,7 +1400,10 @@ open class ImagePage {
      * [ca.mpreg.webgpuviewer.transition.TransitionBasic]. A no-op for a non-[Images] page.
      */
     open fun drawBackgroundColumns(
-        pass: GPURenderPassEncoder, dst: GPUTexture, offsetX: Float, offsetY: Float
+        pass: GPURenderPassEncoder,
+        dst: GPUTexture,
+        offsetX: Float,
+        offsetY: Float,
     ) {
     }
 
@@ -1473,15 +1543,18 @@ open class ImagePage {
         y1: Float,
         x2: Float,
         y2: Float,
-        masked: Boolean = true
+        masked: Boolean = true,
     ) {
         if (fade >= 1f) return
         val color = backgroundColor ?: return
         val alpha = (((color ushr 24) and 0xFF) * (1f - fade)).toInt().coerceIn(0, 255)
         val veil = (alpha shl 24) or (color and 0xFFFFFF)
         // Only a live draw's pass has the stencil attachment drawMaskedRect's pipeline declares.
-        if (masked) RenderPage.drawMaskedRect(pass, format, x1, y1, x2, y2, veil)
-        else Draw.rect(pass, format, x1, y1, x2, y2, veil)
+        if (masked) {
+            RenderPage.drawMaskedRect(pass, format, x1, y1, x2, y2, veil)
+        } else {
+            Draw.rect(pass, format, x1, y1, x2, y2, veil)
+        }
     }
 
     /** True while the viewer is drawing this page, itself or as a side of a spread. */
@@ -1497,7 +1570,9 @@ open class ImagePage {
      * the screen.
      */
     internal open fun attach(
-        parent: ImageViewerState, scope: CoroutineScope?, onInvalidate: () -> Unit
+        parent: ImageViewerState,
+        scope: CoroutineScope?,
+        onInvalidate: () -> Unit,
     ) {
         if (this.parent !== parent) this.parent = parent
         if (this.scope !== scope) this.scope = scope
@@ -1615,7 +1690,11 @@ open class ImagePage {
      * the true floor - the collapsed center sits below it, letting panning reveal past it.
      */
     private fun rawBounds(
-        size: Int, nearEdge: Float, farEdge: Float, parentSize: Int, scale: Float
+        size: Int,
+        nearEdge: Float,
+        farEdge: Float,
+        parentSize: Int,
+        scale: Float,
     ): Pair<Float, Float> {
         val maxV = (0.5f * size - nearEdge) / parentSize - 0.5f / scale
         val minV = (0.5f * size - farEdge) / parentSize + 0.5f / scale
@@ -1670,7 +1749,11 @@ open class ImagePage {
         val trimmed = scale >= homeScale
         val (top, bottom) = yEdges(trimmed) ?: (0 to height)
         val (floor, natMax) = rawBounds(
-            height, top.toFloat(), bottom.toFloat(), parent.height, scale
+            height,
+            top.toFloat(),
+            bottom.toFloat(),
+            parent.height,
+            scale,
         )
         val slack = floor > natMax
         val center = (floor + natMax) / 2f
@@ -1727,7 +1810,8 @@ open class ImagePage {
 
         val endX = when {
             origin != null && scaleChanging -> (startX + (origin.x - 0.5f) * diffEnd).fastCoerceIn(
-                minX, maxX
+                minX,
+                maxX,
             )
 
             origin != null -> x.fastCoerceIn(minX, maxX)
@@ -1735,7 +1819,8 @@ open class ImagePage {
         }
         val endY = when {
             origin != null && scaleChanging -> (startY + (origin.y - 0.5f) * diffEnd).fastCoerceIn(
-                minY, maxY
+                minY,
+                maxY,
             )
 
             origin != null -> y.fastCoerceIn(minY, maxY)
@@ -1754,9 +1839,12 @@ open class ImagePage {
             if (scaleChanging) isScaleAnimating = true
             try {
                 animate(
-                    0f, 1f, animationSpec = spring(
-                        stiffness = Spring.StiffnessMediumLow, visibilityThreshold = 0.002f
-                    )
+                    0f,
+                    1f,
+                    animationSpec = spring(
+                        stiffness = Spring.StiffnessMediumLow,
+                        visibilityThreshold = 0.002f,
+                    ),
                 ) { value, _ ->
                     val currentScale = startScale + (targetScale - startScale) * value
                     val c = if (scaleChanging) {
@@ -1768,7 +1856,7 @@ open class ImagePage {
                     setPos(
                         (startX + (endX - startX) * c).orZero(),
                         (startY + (endY - startY) * c).orZero(),
-                        currentScale
+                        currentScale,
                     )
                 }
             } finally {

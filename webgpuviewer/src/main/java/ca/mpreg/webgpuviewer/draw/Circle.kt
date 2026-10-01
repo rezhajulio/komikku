@@ -29,31 +29,35 @@ private val device get() = WebGpuRenderer.device
 private val pipelines = FormatKeyed { format ->
     val shaderModule = device.createShaderModule(
         GPUShaderModuleDescriptor(
-            shaderSourceWGSL = GPUShaderSourceWGSL(CIRCLE_SHADER)
-        )
+            shaderSourceWGSL = GPUShaderSourceWGSL(CIRCLE_SHADER),
+        ),
     )
     device.createRenderPipeline(
         GPURenderPipelineDescriptor(
             vertex = GPUVertexState(module = shaderModule, entryPoint = "vs_main"),
             fragment = GPUFragmentState(
-                module = shaderModule, entryPoint = "fs_main", targets = arrayOf(
+                module = shaderModule,
+                entryPoint = "fs_main",
+                targets = arrayOf(
                     GPUColorTargetState(
-                        format = format, blend = GPUBlendState(
+                        format = format,
+                        blend = GPUBlendState(
                             color = GPUBlendComponent(
                                 srcFactor = BlendFactor.SrcAlpha,
                                 dstFactor = BlendFactor.OneMinusSrcAlpha,
-                                operation = BlendOperation.Add
-                            ), alpha = GPUBlendComponent(
+                                operation = BlendOperation.Add,
+                            ),
+                            alpha = GPUBlendComponent(
                                 srcFactor = BlendFactor.One,
                                 dstFactor = BlendFactor.OneMinusSrcAlpha,
-                                operation = BlendOperation.Add
-                            )
-                        )
-                    )
-                )
+                                operation = BlendOperation.Add,
+                            ),
+                        ),
+                    ),
+                ),
             ),
-            primitive = GPUPrimitiveState(topology = PrimitiveTopology.TriangleList)
-        )
+            primitive = GPUPrimitiveState(topology = PrimitiveTopology.TriangleList),
+        ),
     )
 }
 
@@ -121,7 +125,7 @@ fun Draw.circle(
     cx: Float,
     cy: Float,
     radius: Float,
-    color: Int
+    color: Int,
 ) {
     val r = ((color shr 16) and 0xFF) / 255f
     val g = ((color shr 8) and 0xFF) / 255f
@@ -141,20 +145,22 @@ fun Draw.circle(
     byteBuffer.flip()
 
     val uniformBuffer = device.createBuffer(
-        GPUBufferDescriptor(size = 32L, usage = BufferUsage.Uniform or BufferUsage.CopyDst)
+        GPUBufferDescriptor(size = 32L, usage = BufferUsage.Uniform or BufferUsage.CopyDst),
     )
     device.queue.writeBuffer(uniformBuffer, 0, byteBuffer)
 
     val pipeline = pipelines[format]
     pass.setPipeline(pipeline)
     pass.setTransientBindGroup(
-        0, device.createBindGroup(
+        0,
+        device.createBindGroup(
             GPUBindGroupDescriptor(
-                layout = pipeline.groupLayout(), entries = arrayOf(
-                    GPUBindGroupEntry(0, buffer = uniformBuffer)
-                )
-            )
-        )
+                layout = pipeline.groupLayout(),
+                entries = arrayOf(
+                    GPUBindGroupEntry(0, buffer = uniformBuffer),
+                ),
+            ),
+        ),
     )
     pass.draw(6)
     uniformBuffer.close()

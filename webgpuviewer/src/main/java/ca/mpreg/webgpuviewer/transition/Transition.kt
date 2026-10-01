@@ -64,32 +64,39 @@ abstract class Transition {
 
     protected open val pipelines = FormatKeyed { format ->
         val shaderModule = device.createShaderModule(
-            GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(code))
+            GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(code)),
         )
 
         device.createRenderPipeline(
             GPURenderPipelineDescriptor(
                 vertex = GPUVertexState(shaderModule, entryPoint = "vs_main"),
                 fragment = GPUFragmentState(
-                    shaderModule, entryPoint = "fs_main", targets = arrayOf(
+                    shaderModule,
+                    entryPoint = "fs_main",
+                    targets = arrayOf(
                         GPUColorTargetState(
-                            format = format, blend = GPUBlendState(
+                            format = format,
+                            blend = GPUBlendState(
                                 color = GPUBlendComponent(
-                                    srcFactor = if (premultipliedOutput) BlendFactor.One
-                                    else BlendFactor.SrcAlpha,
+                                    srcFactor = if (premultipliedOutput) {
+                                        BlendFactor.One
+                                    } else {
+                                        BlendFactor.SrcAlpha
+                                    },
                                     dstFactor = BlendFactor.OneMinusSrcAlpha,
-                                    operation = BlendOperation.Add
-                                ), alpha = GPUBlendComponent(
+                                    operation = BlendOperation.Add,
+                                ),
+                                alpha = GPUBlendComponent(
                                     srcFactor = BlendFactor.One,
                                     dstFactor = BlendFactor.OneMinusSrcAlpha,
-                                    operation = BlendOperation.Add
-                                )
-                            )
-                        )
-                    )
+                                    operation = BlendOperation.Add,
+                                ),
+                            ),
+                        ),
+                    ),
                 ),
                 primitive = GPUPrimitiveState(topology = TriangleList),
-            )
+            ),
         )
     }
 
@@ -125,30 +132,34 @@ abstract class Transition {
         private val blitPipelines = FormatKeyed { format ->
             val device = WebGpuRenderer.device
             val shaderModule = device.createShaderModule(
-                GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(BLIT_SHADER))
+                GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(BLIT_SHADER)),
             )
             device.createRenderPipeline(
                 GPURenderPipelineDescriptor(
                     vertex = GPUVertexState(shaderModule, entryPoint = "vs_main"),
                     fragment = GPUFragmentState(
-                        shaderModule, entryPoint = "fs_main", targets = arrayOf(
+                        shaderModule,
+                        entryPoint = "fs_main",
+                        targets = arrayOf(
                             GPUColorTargetState(
-                                format = format, blend = GPUBlendState(
+                                format = format,
+                                blend = GPUBlendState(
                                     color = GPUBlendComponent(
                                         srcFactor = BlendFactor.One,
                                         dstFactor = BlendFactor.OneMinusSrcAlpha,
-                                        operation = BlendOperation.Add
-                                    ), alpha = GPUBlendComponent(
+                                        operation = BlendOperation.Add,
+                                    ),
+                                    alpha = GPUBlendComponent(
                                         srcFactor = BlendFactor.One,
                                         dstFactor = BlendFactor.OneMinusSrcAlpha,
-                                        operation = BlendOperation.Add
-                                    )
-                                )
-                            )
-                        )
+                                        operation = BlendOperation.Add,
+                                    ),
+                                ),
+                            ),
+                        ),
                     ),
                     primitive = GPUPrimitiveState(topology = TriangleList),
-                )
+                ),
             )
         }
 
@@ -176,16 +187,16 @@ fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
         vec2<f32>(0.0, 1.0),
         vec2<f32>(1.0, 1.0)
     );
-    
+
     let pos = positions[vertex_index];
-    
+
     // Apply offset to position
     let offset_pos = pos + uniforms.offset;
-    
+
     // Convert to NDC
     let ndc_x = offset_pos.x * 2.0 - 1.0;
     let ndc_y = 1.0 - offset_pos.y * 2.0;
-    
+
     var out: VertexOutput;
     out.position = vec4<f32>(ndc_x, ndc_y, 0.0, 1.0);
     out.uv = pos;
@@ -202,30 +213,34 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         private val regionPipelines = FormatKeyed { format ->
             val device = WebGpuRenderer.device
             val shaderModule = device.createShaderModule(
-                GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(REGION_SHADER))
+                GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(REGION_SHADER)),
             )
             device.createRenderPipeline(
                 GPURenderPipelineDescriptor(
                     vertex = GPUVertexState(shaderModule, entryPoint = "vs_main"),
                     fragment = GPUFragmentState(
-                        shaderModule, entryPoint = "fs_main", targets = arrayOf(
+                        shaderModule,
+                        entryPoint = "fs_main",
+                        targets = arrayOf(
                             GPUColorTargetState(
-                                format = format, blend = GPUBlendState(
+                                format = format,
+                                blend = GPUBlendState(
                                     color = GPUBlendComponent(
                                         srcFactor = BlendFactor.One,
                                         dstFactor = BlendFactor.OneMinusSrcAlpha,
-                                        operation = BlendOperation.Add
-                                    ), alpha = GPUBlendComponent(
+                                        operation = BlendOperation.Add,
+                                    ),
+                                    alpha = GPUBlendComponent(
                                         srcFactor = BlendFactor.One,
                                         dstFactor = BlendFactor.OneMinusSrcAlpha,
-                                        operation = BlendOperation.Add
-                                    )
-                                )
-                            )
-                        )
+                                        operation = BlendOperation.Add,
+                                    ),
+                                ),
+                            ),
+                        ),
                     ),
                     primitive = GPUPrimitiveState(topology = TriangleList),
-                )
+                ),
             )
         }
 
@@ -307,22 +322,24 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             byteBuffer.flip()
 
             val uniformBuffer = WebGpuRenderer.device.createBuffer(
-                GPUBufferDescriptor(size = 32, usage = BufferUsage.Uniform or BufferUsage.CopyDst)
+                GPUBufferDescriptor(size = 32, usage = BufferUsage.Uniform or BufferUsage.CopyDst),
             )
             WebGpuRenderer.device.queue.writeBuffer(uniformBuffer, 0, byteBuffer)
 
             val regionPipeline = regionPipelines[format]
             pass.setPipeline(regionPipeline)
             pass.setTransientBindGroup(
-                0, WebGpuRenderer.device.createBindGroup(
+                0,
+                WebGpuRenderer.device.createBindGroup(
                     GPUBindGroupDescriptor(
-                        layout = regionPipeline.groupLayout(), entries = arrayOf(
+                        layout = regionPipeline.groupLayout(),
+                        entries = arrayOf(
                             GPUBindGroupEntry(0, buffer = uniformBuffer),
                             GPUBindGroupEntry(1, textureView = cachedView),
-                            GPUBindGroupEntry(2, sampler = blitSampler)
-                        )
-                    )
-                )
+                            GPUBindGroupEntry(2, sampler = blitSampler),
+                        ),
+                    ),
+                ),
             )
             pass.draw(6)
             uniformBuffer.close()
@@ -403,15 +420,15 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     GPUTextureDescriptor(
                         size = GPUExtent3D(width, height),
                         format = format,
-                        usage = TextureUsage.RenderAttachment or TextureUsage.TextureBinding
-                    )
+                        usage = TextureUsage.RenderAttachment or TextureUsage.TextureBinding,
+                    ),
                 )
                 texture2 = WebGpuRenderer.device.createTexture(
                     GPUTextureDescriptor(
                         size = GPUExtent3D(width, height),
                         format = format,
-                        usage = TextureUsage.RenderAttachment or TextureUsage.TextureBinding
-                    )
+                        usage = TextureUsage.RenderAttachment or TextureUsage.TextureBinding,
+                    ),
                 )
                 view1 = texture1!!.createView()
                 view2 = texture2!!.createView()
@@ -500,8 +517,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     }
 
                     cacheHitLocked(newCurrentPage, false) -> {
-                        val t = texture1; texture1 = texture2; texture2 = t
-                        val v = view1; view1 = view2; view2 = v
+                        val t = texture1
+                        texture1 = texture2
+                        texture2 = t
+                        val v = view1
+                        view1 = view2
+                        view2 = v
                         cachedPage1 = cachedPage2
                         cachedX1 = cachedX2
                         cachedY1 = cachedY2
@@ -591,8 +612,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             page.renderIntoCache(encoder, texture, tiles, identityMatches)
 
             val newBlitted =
-                if (available == null) emptySet()
-                else page.newlyAvailableTileKeys(tiles, texture) ?: emptySet()
+                if (available == null) {
+                    emptySet()
+                } else {
+                    page.newlyAvailableTileKeys(tiles, texture) ?: emptySet()
+                }
 
             synchronized(cacheLock) {
                 // Swapped mid-render: the view is still right, the metadata isn't.
@@ -625,7 +649,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             val texture: GPUTexture,
             val view: GPUTextureView,
             val identityMatches: Boolean,
-            val blittedKeys: Set<Long>
+            val blittedKeys: Set<Long>,
         )
 
         /**
@@ -635,7 +659,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
          * them read back what an earlier one in the same frame wrote.
          */
         internal fun beginClearedPass(
-            encoder: GPUCommandEncoder, dst: GPUTexture
+            encoder: GPUCommandEncoder,
+            dst: GPUTexture,
         ): GPURenderPassEncoder {
             val targetView = dst.createView()
             // The pass holds its own reference to its attachment, so ours can go at once.
@@ -646,10 +671,10 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                             view = targetView,
                             loadOp = LoadOp.Clear,
                             storeOp = StoreOp.Store,
-                            clearValue = GPUColor(0.0, 0.0, 0.0, 0.0)
-                        )
-                    )
-                )
+                            clearValue = GPUColor(0.0, 0.0, 0.0, 0.0),
+                        ),
+                    ),
+                ),
             ).also { targetView.close() }
         }
 
@@ -657,7 +682,10 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         internal fun blitCached(
             pass: GPURenderPassEncoder,
             /** Format of [pass]'s colour attachment - see [FormatKeyed]. */
-            format: Int, cachedView: GPUTextureView?, offsetX: Float, offsetY: Float
+            format: Int,
+            cachedView: GPUTextureView?,
+            offsetX: Float,
+            offsetY: Float,
         ) {
             if (cachedView == null) return
 
@@ -668,22 +696,24 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             byteBuffer.flip()
 
             val uniformBuffer = WebGpuRenderer.device.createBuffer(
-                GPUBufferDescriptor(size = 8, usage = BufferUsage.Uniform or BufferUsage.CopyDst)
+                GPUBufferDescriptor(size = 8, usage = BufferUsage.Uniform or BufferUsage.CopyDst),
             )
             WebGpuRenderer.device.queue.writeBuffer(uniformBuffer, 0, byteBuffer)
 
             val blitPipeline = blitPipelines[format]
             pass.setPipeline(blitPipeline)
             pass.setTransientBindGroup(
-                0, WebGpuRenderer.device.createBindGroup(
+                0,
+                WebGpuRenderer.device.createBindGroup(
                     GPUBindGroupDescriptor(
-                        layout = blitPipeline.groupLayout(), entries = arrayOf(
+                        layout = blitPipeline.groupLayout(),
+                        entries = arrayOf(
                             GPUBindGroupEntry(0, buffer = uniformBuffer),
                             GPUBindGroupEntry(1, textureView = cachedView),
-                            GPUBindGroupEntry(2, sampler = blitSampler)
-                        )
-                    )
-                )
+                            GPUBindGroupEntry(2, sampler = blitSampler),
+                        ),
+                    ),
+                ),
             )
             pass.draw(6)
             uniformBuffer.close()

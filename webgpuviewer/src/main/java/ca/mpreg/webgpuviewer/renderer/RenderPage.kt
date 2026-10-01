@@ -83,7 +83,8 @@ object RenderPage {
     // TileRenderer's blit already wrote (stencil == 1) instead of shading it a second time.
     private val samplerVariant = Variant { format ->
         buildPipeline(
-            TILE_HEADER + TILE_VS_MAIN + TILE_SAMPLER_FS, format,
+            TILE_HEADER + TILE_VS_MAIN + TILE_SAMPLER_FS,
+            format,
             depthStencil = GPUDepthStencilState(
                 format = TextureFormat.Stencil8,
                 depthWriteEnabled = OptionalBool.False,
@@ -91,7 +92,7 @@ object RenderPage {
                 stencilFront = GPUStencilFaceState(compare = CompareFunction.NotEqual),
                 stencilBack = GPUStencilFaceState(compare = CompareFunction.NotEqual),
                 stencilReadMask = 0xFF,
-            )
+            ),
         )
     }
 
@@ -134,45 +135,52 @@ object RenderPage {
     // samplerVariant/renderBackground's pipelines - it doesn't itself participate in masking.
     private val plainVariantMasked = Variant { format ->
         buildPipeline(
-            TILE_HEADER + TILE_VS_MAIN + TILE_PLAIN_FS, format,
+            TILE_HEADER + TILE_VS_MAIN + TILE_PLAIN_FS,
+            format,
             depthStencil = GPUDepthStencilState(
                 format = TextureFormat.Stencil8,
                 depthWriteEnabled = OptionalBool.False,
                 depthCompare = CompareFunction.Always,
-            )
+            ),
         )
     }
 
     private fun buildPipeline(
-        code: String, format: Int, depthStencil: GPUDepthStencilState? = null
+        code: String,
+        format: Int,
+        depthStencil: GPUDepthStencilState? = null,
     ): GPURenderPipeline {
         val shaderModule = device.createShaderModule(
-            GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(code))
+            GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(code)),
         )
 
         return device.createRenderPipeline(
             GPURenderPipelineDescriptor(
                 vertex = GPUVertexState(shaderModule, entryPoint = "vs_main"),
                 fragment = GPUFragmentState(
-                    shaderModule, entryPoint = "fs_main", targets = arrayOf(
+                    shaderModule,
+                    entryPoint = "fs_main",
+                    targets = arrayOf(
                         GPUColorTargetState(
-                            format = format, blend = GPUBlendState(
+                            format = format,
+                            blend = GPUBlendState(
                                 color = GPUBlendComponent(
                                     srcFactor = BlendFactor.SrcAlpha,
                                     dstFactor = BlendFactor.OneMinusSrcAlpha,
-                                    operation = BlendOperation.Add
-                                ), alpha = GPUBlendComponent(
+                                    operation = BlendOperation.Add,
+                                ),
+                                alpha = GPUBlendComponent(
                                     srcFactor = BlendFactor.One,
                                     dstFactor = BlendFactor.OneMinusSrcAlpha,
-                                    operation = BlendOperation.Add
-                                )
-                            )
-                        )
-                    )
+                                    operation = BlendOperation.Add,
+                                ),
+                            ),
+                        ),
+                    ),
                 ),
                 primitive = GPUPrimitiveState(topology = TriangleList),
                 depthStencil = depthStencil,
-            )
+            ),
         )
     }
 
@@ -223,35 +231,39 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     private val maskedRectPipelines = FormatKeyed { format ->
         val shaderModule = device.createShaderModule(
-            GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(MASKED_RECT_SHADER))
+            GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(MASKED_RECT_SHADER)),
         )
         device.createRenderPipeline(
             GPURenderPipelineDescriptor(
                 vertex = GPUVertexState(module = shaderModule, entryPoint = "vs_main"),
                 fragment = GPUFragmentState(
-                    module = shaderModule, entryPoint = "fs_main", targets = arrayOf(
+                    module = shaderModule,
+                    entryPoint = "fs_main",
+                    targets = arrayOf(
                         GPUColorTargetState(
-                            format = format, blend = GPUBlendState(
+                            format = format,
+                            blend = GPUBlendState(
                                 color = GPUBlendComponent(
                                     srcFactor = BlendFactor.SrcAlpha,
                                     dstFactor = BlendFactor.OneMinusSrcAlpha,
-                                    operation = BlendOperation.Add
-                                ), alpha = GPUBlendComponent(
+                                    operation = BlendOperation.Add,
+                                ),
+                                alpha = GPUBlendComponent(
                                     srcFactor = BlendFactor.One,
                                     dstFactor = BlendFactor.OneMinusSrcAlpha,
-                                    operation = BlendOperation.Add
-                                )
-                            )
-                        )
-                    )
+                                    operation = BlendOperation.Add,
+                                ),
+                            ),
+                        ),
+                    ),
                 ),
                 primitive = GPUPrimitiveState(topology = TriangleList),
                 depthStencil = GPUDepthStencilState(
                     format = TextureFormat.Stencil8,
                     depthWriteEnabled = OptionalBool.False,
                     depthCompare = CompareFunction.Always,
-                )
-            )
+                ),
+            ),
         )
     }
 
@@ -267,7 +279,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         y1: Float,
         x2: Float,
         y2: Float,
-        color: Int
+        color: Int,
     ) {
         val r = ((color shr 16) and 0xFF) / 255f
         val g = ((color shr 8) and 0xFF) / 255f
@@ -287,20 +299,22 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         byteBuffer.flip()
 
         val uniformBuffer = device.createBuffer(
-            GPUBufferDescriptor(size = 32L, usage = BufferUsage.Uniform or BufferUsage.CopyDst)
+            GPUBufferDescriptor(size = 32L, usage = BufferUsage.Uniform or BufferUsage.CopyDst),
         )
         device.queue.writeBuffer(uniformBuffer, 0, byteBuffer)
 
         val maskedRectPipeline = maskedRectPipelines[format]
         pass.setPipeline(maskedRectPipeline)
         pass.setTransientBindGroup(
-            0, device.createBindGroup(
+            0,
+            device.createBindGroup(
                 GPUBindGroupDescriptor(
-                    layout = maskedRectPipeline.groupLayout(), entries = arrayOf(
-                        GPUBindGroupEntry(0, buffer = uniformBuffer)
-                    )
-                )
-            )
+                    layout = maskedRectPipeline.groupLayout(),
+                    entries = arrayOf(
+                        GPUBindGroupEntry(0, buffer = uniformBuffer),
+                    ),
+                ),
+            ),
         )
         pass.draw(6)
         uniformBuffer.close()
@@ -600,7 +614,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         y: Float,
         scale: Float,
         linear: Boolean = true,
-        masked: Boolean = true
+        masked: Boolean = true,
     ) = renderImageTiled(pass, image, dst, x, y, scale, variantFor(linear, masked))
 
     /** As [render], for [renderFast]/[ImagePage.ImageSingle.renderPage] - draws every tile separately. */
@@ -611,7 +625,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         x: Float,
         y: Float,
         scale: Float,
-        variant: Variant
+        variant: Variant,
     ) {
         for (tile in image.prepareTilesForRender(dst, x, y, scale)) {
             drawTile(pass, dst, tile, variant)
@@ -623,7 +637,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         image: Image,
         dst: GPUTexture,
         res: Image.MipMapForDraw,
-        variant: Variant
+        variant: Variant,
     ) {
         val byteBuffer = byteBufferLocal.get()
         byteBuffer.clear()
@@ -642,15 +656,18 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         val pipeline = variant.pipeline(dst.format)
         val entries = arrayOf(
             GPUBindGroupEntry(0, buffer = image.buffer),
-        ).plus(res.quad.tileViews.mapIndexed { i, view ->
-            GPUBindGroupEntry(1 + i, textureView = view)
-        })
+        ).plus(
+            res.quad.tileViews.mapIndexed { i, view ->
+                GPUBindGroupEntry(1 + i, textureView = view)
+            },
+        )
 
         pass.setPipeline(pipeline)
         pass.setTransientBindGroup(
-            0, device.createBindGroup(
-                GPUBindGroupDescriptor(layout = pipeline.groupLayout(), entries = entries)
-            )
+            0,
+            device.createBindGroup(
+                GPUBindGroupDescriptor(layout = pipeline.groupLayout(), entries = entries),
+            ),
         )
 
         pass.draw(6)
@@ -661,7 +678,10 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
      * rather than the shared scratch one [draw] uses - see [Mipmap.TileRect]'s doc for why.
      */
     internal fun drawTile(
-        pass: GPURenderPassEncoder, dst: GPUTexture, tile: Image.TileForDraw, variant: Variant
+        pass: GPURenderPassEncoder,
+        dst: GPUTexture,
+        tile: Image.TileForDraw,
+        variant: Variant,
     ) {
         val byteBuffer = byteBufferLocal.get()
         byteBuffer.clear()
@@ -680,14 +700,16 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         // the only thing that ever writes this attachment.
         if (variant === samplerVariant) pass.setStencilReference(1)
         pass.setTransientBindGroup(
-            0, device.createBindGroup(
+            0,
+            device.createBindGroup(
                 GPUBindGroupDescriptor(
-                    layout = pipeline.groupLayout(), entries = arrayOf(
+                    layout = pipeline.groupLayout(),
+                    entries = arrayOf(
                         GPUBindGroupEntry(0, buffer = tile.uniform),
                         GPUBindGroupEntry(1, textureView = tile.view),
-                    )
-                )
-            )
+                    ),
+                ),
+            ),
         )
         pass.draw(6)
     }

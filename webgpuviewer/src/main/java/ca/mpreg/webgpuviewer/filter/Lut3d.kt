@@ -23,10 +23,14 @@ class Lut3d(val size: Int, val data: FloatArray, val limitedRange: Boolean = fal
         fun identity(size: Int = 2): Lut3d {
             val data = FloatArray(size * size * size * 3)
             var i = 0
-            for (b in 0 until size) for (g in 0 until size) for (r in 0 until size) {
-                data[i++] = r.toFloat() / (size - 1)
-                data[i++] = g.toFloat() / (size - 1)
-                data[i++] = b.toFloat() / (size - 1)
+            for (b in 0 until size) {
+                for (g in 0 until size) {
+                    for (r in 0 until size) {
+                        data[i++] = r.toFloat() / (size - 1)
+                        data[i++] = g.toFloat() / (size - 1)
+                        data[i++] = b.toFloat() / (size - 1)
+                    }
+                }
             }
             return Lut3d(size, data)
         }
@@ -74,7 +78,7 @@ class Lut3d(val size: Int, val data: FloatArray, val limitedRange: Boolean = fal
 
                     "DOMAIN_MIN" -> for (c in 0 until 3) domainMin[c] = parts[c + 1].toFloat()
                     "DOMAIN_MAX" -> for (c in 0 until 3) domainMax[c] = parts[c + 1].toFloat()
-                    else -> continue    // TITLE, and anything else this doesn't need
+                    else -> continue // TITLE, and anything else this doesn't need
                 }
             }
 

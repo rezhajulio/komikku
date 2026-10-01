@@ -193,7 +193,7 @@ object Hdr {
                 Log.w(
                     TAG,
                     "Could not register HDR/SDR ratio listener - won't track brightness live",
-                    e
+                    e,
                 )
                 null
             }
@@ -268,9 +268,11 @@ object Hdr {
     private val hdrLock = Any()
 
     val presentFormat: Int
-        get() = if (supportedByDevice && liveHdrCount > 0 && hdrRecentlyDrawn)
+        get() = if (supportedByDevice && liveHdrCount > 0 && hdrRecentlyDrawn) {
             TextureFormat.RGBA16Float
-        else TextureFormat.RGBA8Unorm
+        } else {
+            TextureFormat.RGBA8Unorm
+        }
 
     /**
      * Rendered frames drawing no HDR image before presentation drops back to SDR.
@@ -319,8 +321,9 @@ object Hdr {
     private fun reclaimIfMissing(image: Image, headroomStops: Float) {
         val added = synchronized(hdrLock) {
             pruneLocked()
-            if (liveHdrClaims.any { it.image === image }) false
-            else {
+            if (liveHdrClaims.any { it.image === image }) {
+                false
+            } else {
                 liveHdrClaims.add(Claim(image, headroomStops))
                 true
             }
@@ -331,7 +334,10 @@ object Hdr {
         }
     }
 
-    private val liveHdrCount: Int get() = synchronized(hdrLock) { pruneLocked(); liveHdrClaims.size }
+    private val liveHdrCount: Int get() = synchronized(hdrLock) {
+        pruneLocked()
+        liveHdrClaims.size
+    }
 
     /** Caller holds [hdrLock]. Read every frame by way of [presentFormat], so leaks self-correct. */
     private fun pruneLocked() {
@@ -376,8 +382,12 @@ object Hdr {
     internal fun latchFrameFormat(): Boolean {
         val drew = hdrDrawn
         hdrDrawn = false
-        if (drew) framesWithoutHdr =
-            0 else if (framesWithoutHdr < HDR_IDLE_FRAMES) framesWithoutHdr++
+        if (drew) {
+            framesWithoutHdr =
+                0
+        } else if (framesWithoutHdr < HDR_IDLE_FRAMES) {
+            framesWithoutHdr++
+        }
 
         val next = presentFormat
 
@@ -587,13 +597,13 @@ object Hdr {
             SurfaceControl.Transaction()
                 .setDataSpace(
                     surfaceControl,
-                    if (wantHdr) DataSpace.DATASPACE_SCRGB else DataSpace.DATASPACE_SRGB
+                    if (wantHdr) DataSpace.DATASPACE_SCRGB else DataSpace.DATASPACE_SRGB,
                 )
                 .setExtendedRangeBrightness(surfaceControl, bufferRatio, desiredRatio)
                 .apply()
             Log.i(
                 TAG,
-                "Surface range: ${if (wantHdr) "extended sRGB, buffer $bufferRatio desired $desiredRatio" else "sRGB"}"
+                "Surface range: ${if (wantHdr) "extended sRGB, buffer $bufferRatio desired $desiredRatio" else "sRGB"}",
             )
             true
         } catch (e: Exception) {

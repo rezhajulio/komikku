@@ -88,7 +88,9 @@ class Image private constructor(
 
     companion object {
         suspend operator fun invoke(
-            pixels: ByteBuffer, width: Int, height: Int,
+            pixels: ByteBuffer,
+            width: Int,
+            height: Int,
             createMipMaps: Boolean = true,
             trimColors: List<FloatArray>? = null,
             trimThreshold: Float = 0.05f,
@@ -105,7 +107,8 @@ class Image private constructor(
             // Everything HDR resolves to plain pixels here, so nothing downstream has to know
             // which kind arrived. An app can hand over HDR without checking whether the device
             // can show it.
-            @Suppress("NAME_SHADOWING") var pixels = pixels
+            @Suppress("NAME_SHADOWING")
+            var pixels = pixels
             var keepHdr = false
             var headroom = hdrHeadroom
 
@@ -115,8 +118,8 @@ class Image private constructor(
             // than pixels scaled against a target they already sit above. Checked before the
             // await, which otherwise waits up to two seconds for a surface it will not use.
             val canHdr = (hdr || gainmap != null) &&
-                    Hdr.presentPeak > 1f &&
-                    Hdr.awaitSupportedByDevice()
+                Hdr.presentPeak > 1f &&
+                Hdr.awaitSupportedByDevice()
 
             when {
                 // A gain map is applied here rather than by the decoder: how much of it to use
@@ -140,7 +143,7 @@ class Image private constructor(
                             // presented, instead of wherever the file aimed.
                             weight = Hdr.peakWeight(
                                 gainmap.minHeadroomStops,
-                                gainmap.headroomStops
+                                gainmap.headroomStops,
                             ),
                         )
                     }
@@ -182,8 +185,8 @@ class Image private constructor(
                 Log.i(
                     "Renderer",
                     "HDR ${width}x$height hdr=$hdr gainmap=${gainmap != null} " +
-                            "canHdr=$canHdr declared=${hdrHeadroom} stops " +
-                            "-> keepHdr=$keepHdr headroom=$headroom stops target=${Hdr.presentPeak}"
+                        "canHdr=$canHdr declared=$hdrHeadroom stops " +
+                        "-> keepHdr=$keepHdr headroom=$headroom stops target=${Hdr.presentPeak}",
                 )
             }
 
@@ -228,22 +231,28 @@ class Image private constructor(
                     keepHdr,
                     trimColors,
                     trimThreshold,
-                    backgroundColor
+                    backgroundColor,
                 )
             }
             image.trim = trim
             background?.let { image.backgroundColor = it }
-            if (!keepHdr) image.inkMap = withContext(Dispatchers.Default) {
-                InkMap.from(pixels, width, height)
+            if (!keepHdr) {
+                image.inkMap = withContext(Dispatchers.Default) {
+                    InkMap.from(pixels, width, height)
+                }
             }
 
             val levels = listOf(Level(pixels, width, height, 1f)) +
-                    if (createMipMaps) smallerLevels(
+                if (createMipMaps) {
+                    smallerLevels(
                         pixels,
                         width,
                         height,
-                        keepHdr
-                    ) else emptyList()
+                        keepHdr,
+                    )
+                } else {
+                    emptyList()
+                }
 
             // No render mutex: Mipmap.create yields between upload chunks so queued frames get
             // the thread back. Safe since the image isn't reachable from any page yet.
@@ -322,7 +331,10 @@ class Image private constructor(
         }
 
         private suspend fun smallerLevels(
-            pixels: ByteBuffer, width: Int, height: Int, keepHdr: Boolean,
+            pixels: ByteBuffer,
+            width: Int,
+            height: Int,
+            keepHdr: Boolean,
         ): List<Level> {
             val levels = mutableListOf<Level>()
             var currentPixels = pixels
@@ -335,11 +347,14 @@ class Image private constructor(
                 val newWidth = floor(width * scale).toInt()
                 val newHeight = floor(height * scale).toInt()
                 if (newWidth < 1 || newHeight < 1) break
-                Log.d("Renderer", "Create mipmap using CPU ${scale} ${newWidth} ${newHeight}")
+                Log.d("Renderer", "Create mipmap using CPU $scale $newWidth $newHeight")
 
                 currentPixels = withContext(Dispatchers.Default) {
-                    if (keepHdr) ImageUtil.resizeF16(currentPixels, textureWidth, textureHeight)
-                    else ImageUtil.resize(currentPixels, textureWidth, textureHeight)
+                    if (keepHdr) {
+                        ImageUtil.resizeF16(currentPixels, textureWidth, textureHeight)
+                    } else {
+                        ImageUtil.resize(currentPixels, textureWidth, textureHeight)
+                    }
                 }
                 levels.add(Level(currentPixels, newWidth, newHeight, scale))
                 textureWidth = newWidth
@@ -382,8 +397,8 @@ class Image private constructor(
         return WebGpuRenderer.onDispatcher { _ ->
             try {
                 base.update(pixels, rect) &&
-                        levels.drop(1).zip(smaller)
-                            .all { (level, data) -> level.update(data.pixels) }
+                    levels.drop(1).zip(smaller)
+                        .all { (level, data) -> level.update(data.pixels) }
             } finally {
                 contentVersion++
             }
@@ -446,7 +461,7 @@ class Image private constructor(
     }
 
     private var _buffer: GPUBuffer? = WebGpuRenderer.device.createBuffer(
-        GPUBufferDescriptor(size = BUFFER_SIZE, usage = BufferUsage.CopyDst or BufferUsage.Uniform)
+        GPUBufferDescriptor(size = BUFFER_SIZE, usage = BufferUsage.CopyDst or BufferUsage.Uniform),
     )
 
     val buffer: GPUBuffer
@@ -494,12 +509,19 @@ class Image private constructor(
         val x1 = 0.5f + scale * (adjustedX - 0.5f * width / dstWidth)
         val y1 = 0.5f + scale * (adjustedY - 0.5f * height / dstHeight)
         return floatArrayOf(
-            x1, y1, x1 + scale * width / dstWidth, y1 + scale * height / dstHeight
+            x1,
+            y1,
+            x1 + scale * width / dstWidth,
+            y1 + scale * height / dstHeight,
         )
     }
 
     class MipMapForDraw(
-        val mipmap: Mipmap, val quad: Mipmap.Quad, val x: Float, val y: Float, val scale: Float
+        val mipmap: Mipmap,
+        val quad: Mipmap.Quad,
+        val x: Float,
+        val y: Float,
+        val scale: Float,
     )
 
     fun prepareForRender(dst: GPUTexture, x: Float, y: Float, scale: Float): MipMapForDraw? {
@@ -540,7 +562,7 @@ class Image private constructor(
             quad,
             (0.5f / scale + adjustedX) * mipmap.scale + (quad.x - 0.5f * mipmap.width) / dst.width,
             (0.5f / scale + adjustedY) * mipmap.scale + (quad.y - 0.5f * mipmap.height) / dst.height,
-            scale / mipmap.scale
+            scale / mipmap.scale,
         )
     }
 
@@ -551,7 +573,7 @@ class Image private constructor(
         val uniform: GPUBuffer,
         val x: Float,
         val y: Float,
-        val scale: Float
+        val scale: Float,
     )
 
     /**
@@ -561,7 +583,10 @@ class Image private constructor(
      * guard is needed here since any viewport is just whichever tiles it happens to overlap.
      */
     fun prepareTilesForRender(
-        dst: GPUTexture, x: Float, y: Float, scale: Float
+        dst: GPUTexture,
+        x: Float,
+        y: Float,
+        scale: Float,
     ): List<TileForDraw> {
         if (isHdr) Hdr.noteHdrDrawn(this, hdrHeadroom)
         if (mipmaps.isEmpty()) return emptyList()
@@ -589,7 +614,7 @@ class Image private constructor(
                 tile.uniform,
                 (0.5f / scale + adjustedX) * mipmap.scale + (tile.x - 0.5f * mipmap.width) / dst.width,
                 (0.5f / scale + adjustedY) * mipmap.scale + (tile.y - 0.5f * mipmap.height) / dst.height,
-                scale / mipmap.scale
+                scale / mipmap.scale,
             )
         }
     }

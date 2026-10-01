@@ -104,7 +104,7 @@ internal fun solveImagePlacement(
     imageScale: Float,
     image: Image,
     dstWidth: Float,
-    dstHeight: Float
+    dstHeight: Float,
 ): Pair<Float, Float> {
     val x =
         (targetX - dstWidth / 2f) / (imageScale * dstWidth) - image.x / dstWidth - WebGpuRenderer.offsetX
@@ -312,7 +312,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
      */
     private val staged
         get() = upscaler.run { factor > 1 && supported } ||
-                downscaler.run { factor > 1 && supported }
+            downscaler.run { factor > 1 && supported }
 
     // The pipelines [renderTileContent] draws through, re-derived only when a rescaler is
     // swapped. By identity, since each rescaler class shares one instance of its shader source.
@@ -341,7 +341,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
     // left to reach the thread's uncaught exception handler and end the process.
     private val workerScope = CoroutineScope(
         WebGpuRenderer.dispatcher + SupervisorJob() +
-                CoroutineExceptionHandler { _, e -> Log.e(TAG, "Tile worker failed", e) },
+            CoroutineExceptionHandler { _, e -> Log.e(TAG, "Tile worker failed", e) },
     )
 
     // Timestamp-query based GPU cost measurement for [generateTile]'s batches - null wherever the
@@ -362,12 +362,13 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
         timestampPool.removeLastOrNull() ?: TimestampBuffers(
             device.createBuffer(
                 GPUBufferDescriptor(
-                    size = 16, usage = BufferUsage.QueryResolve or BufferUsage.CopySrc
-                )
+                    size = 16,
+                    usage = BufferUsage.QueryResolve or BufferUsage.CopySrc,
+                ),
             ),
             device.createBuffer(
-                GPUBufferDescriptor(size = 16, usage = BufferUsage.MapRead or BufferUsage.CopyDst)
-            )
+                GPUBufferDescriptor(size = 16, usage = BufferUsage.MapRead or BufferUsage.CopyDst),
+            ),
         )
 
     private fun releaseTimestampBuffers(buffers: TimestampBuffers) {
@@ -491,7 +492,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
     private fun rescalerApplies(st: PageTiles): Boolean {
         val rescaler: Rescaler = if (st.scale >= 1f) upscaler else downscaler
         return rescaler.factor > 1 && rescaler.supported &&
-                rescaler.appliesAt(st.scale) && rescaler.fits(st.tileSize)
+            rescaler.appliesAt(st.scale) && rescaler.fits(st.tileSize)
     }
 
     /** One cached tile: where in the [TileAtlas] it sits (packed), and when it was last drawn. */
@@ -515,8 +516,8 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
             GPUTextureDescriptor(
                 size = GPUExtent3D(side, side),
                 usage = TextureUsage.CopyDst or TextureUsage.TextureBinding,
-                format = format
-            )
+                format = format,
+            ),
         )
 
         val view: GPUTextureView = texture.createView()
@@ -531,8 +532,8 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
                 GPUTextureDescriptor(
                     size = GPUExtent3D(tileSize, tileSize),
                     usage = TextureUsage.RenderAttachment or TextureUsage.CopySrc,
-                    format = format
-                )
+                    format = format,
+                ),
             )
         }
 
@@ -610,9 +611,9 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
                 GPUTexelCopyTextureInfo(texture = scratch(tileSize)),
                 GPUTexelCopyTextureInfo(
                     texture = texture,
-                    origin = GPUOrigin3D(x = unpackX(origin), y = unpackY(origin))
+                    origin = GPUOrigin3D(x = unpackX(origin), y = unpackY(origin)),
                 ),
-                GPUExtent3D(tileSize, tileSize)
+                GPUExtent3D(tileSize, tileSize),
             )
 
         fun destroy() {
@@ -645,11 +646,15 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
     }
 
     private fun newGrid(page: ImagePage.ImageSingle, pageScale: Float) = PageTiles(
-        pageScale, page, device.createBuffer(
+        pageScale,
+        page,
+        device.createBuffer(
             GPUBufferDescriptor(
-                size = FRAME_UNIFORM_BYTES, usage = BufferUsage.Uniform or BufferUsage.CopyDst
-            )
-        ), preferredTileSize
+                size = FRAME_UNIFORM_BYTES,
+                usage = BufferUsage.Uniform or BufferUsage.CopyDst,
+            ),
+        ),
+        preferredTileSize,
     )
 
     /**
@@ -659,7 +664,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
     private fun freeColdestGrid(keep: PageTiles) {
         val victim = pages.values.firstOrNull {
             it !== keep && it.tiles.isNotEmpty() && !it.page.isOnScreen &&
-                    it.tiles.values.none { t -> t.lastUsed >= frame - 1 }
+                it.tiles.values.none { t -> t.lastUsed >= frame - 1 }
         } ?: return
         releaseTiles(victim)
         victim.pending.clear()
@@ -758,7 +763,10 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
 
     /** One tile of work for the shared worker - see [schedule]/[nextRequest]. */
     private class Request(
-        val state: PageTiles, val tx: Int, val ty: Int, val onScreen: Boolean
+        val state: PageTiles,
+        val tx: Int,
+        val ty: Int,
+        val onScreen: Boolean,
     )
 
     // Access-ordered so getOrPut's read-then-maybe-write always moves the touched page to the
@@ -778,7 +786,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
             GPUSamplerDescriptor(
                 magFilter = FilterMode.Nearest,
                 minFilter = FilterMode.Nearest,
-            )
+            ),
         )
     }
 
@@ -794,40 +802,42 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
                     GPUBindGroupLayoutEntry(
                         binding = 0,
                         visibility = ShaderStage.Vertex or ShaderStage.Fragment,
-                        buffer = GPUBufferBindingLayout(type = BufferBindingType.Uniform)
+                        buffer = GPUBufferBindingLayout(type = BufferBindingType.Uniform),
                     ),
                     GPUBindGroupLayoutEntry(
                         binding = 1,
                         visibility = ShaderStage.Fragment,
-                        texture = GPUTextureBindingLayout(sampleType = TextureSampleType.Float)
+                        texture = GPUTextureBindingLayout(sampleType = TextureSampleType.Float),
                     ),
                     GPUBindGroupLayoutEntry(
                         binding = 2,
                         visibility = ShaderStage.Fragment,
-                        sampler = GPUSamplerBindingLayout(type = SamplerBindingType.Filtering)
+                        sampler = GPUSamplerBindingLayout(type = SamplerBindingType.Filtering),
                     ),
-                )
-            )
+                ),
+            ),
         )
     }
 
     private val blitPipelineLayout by lazy {
         device.createPipelineLayout(
-            GPUPipelineLayoutDescriptor(bindGroupLayouts = arrayOf(blitBindGroupLayout))
+            GPUPipelineLayoutDescriptor(bindGroupLayouts = arrayOf(blitBindGroupLayout)),
         )
     }
 
     private fun buildBlitPipeline(
         format: Int,
-        depthStencil: GPUDepthStencilState?
+        depthStencil: GPUDepthStencilState?,
     ): GPURenderPipeline {
         val shaderModule = device.createShaderModule(
-            GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(BLIT_SHADER))
+            GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(BLIT_SHADER)),
         )
         return device.createRenderPipeline(
             GPURenderPipelineDescriptor(
                 vertex = GPUVertexState(
-                    module = shaderModule, entryPoint = "vs_main", buffers = arrayOf(
+                    module = shaderModule,
+                    entryPoint = "vs_main",
+                    buffers = arrayOf(
                         GPUVertexBufferLayout(
                             arrayStride = INSTANCE_BYTES,
                             stepMode = VertexStepMode.Instance,
@@ -835,35 +845,39 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
                                 GPUVertexAttribute(
                                     format = VertexFormat.Float32x4,
                                     offset = 0,
-                                    shaderLocation = 0
-                                )
-                            )
-                        )
-                    )
+                                    shaderLocation = 0,
+                                ),
+                            ),
+                        ),
+                    ),
                 ),
                 layout = blitPipelineLayout,
                 fragment = GPUFragmentState(
-                    module = shaderModule, entryPoint = "fs_main", targets = arrayOf(
+                    module = shaderModule,
+                    entryPoint = "fs_main",
+                    targets = arrayOf(
                         GPUColorTargetState(
                             // Tiles hold RenderPage's output, which is premultiplied, so One
                             // rather than SrcAlpha.
-                            format = format, blend = GPUBlendState(
+                            format = format,
+                            blend = GPUBlendState(
                                 color = GPUBlendComponent(
                                     srcFactor = BlendFactor.One,
                                     dstFactor = BlendFactor.OneMinusSrcAlpha,
-                                    operation = BlendOperation.Add
-                                ), alpha = GPUBlendComponent(
+                                    operation = BlendOperation.Add,
+                                ),
+                                alpha = GPUBlendComponent(
                                     srcFactor = BlendFactor.One,
                                     dstFactor = BlendFactor.OneMinusSrcAlpha,
-                                    operation = BlendOperation.Add
-                                )
-                            )
-                        )
-                    )
+                                    operation = BlendOperation.Add,
+                                ),
+                            ),
+                        ),
+                    ),
                 ),
                 primitive = GPUPrimitiveState(topology = PrimitiveTopology.TriangleList),
                 depthStencil = depthStencil,
-            )
+            ),
         )
     }
 
@@ -879,18 +893,21 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
      */
     private val blitPipelinesStencilWrite = FormatKeyed { format ->
         buildBlitPipeline(
-            format, GPUDepthStencilState(
+            format,
+            GPUDepthStencilState(
                 format = TextureFormat.Stencil8,
                 depthWriteEnabled = OptionalBool.False,
                 depthCompare = CompareFunction.Always,
                 stencilFront = GPUStencilFaceState(
-                    compare = CompareFunction.Always, passOp = StencilOperation.Replace
+                    compare = CompareFunction.Always,
+                    passOp = StencilOperation.Replace,
                 ),
                 stencilBack = GPUStencilFaceState(
-                    compare = CompareFunction.Always, passOp = StencilOperation.Replace
+                    compare = CompareFunction.Always,
+                    passOp = StencilOperation.Replace,
                 ),
                 stencilWriteMask = 0xFF,
-            )
+            ),
         )
     }
 
@@ -921,7 +938,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
                         usage = TextureUsage.RenderAttachment,
                         size = GPUExtent3D(dst.width, dst.height),
                         format = TextureFormat.Stencil8,
-                    )
+                    ),
                 )
                 stencilTextures[i] = texture
                 stencilViews[i] = texture.createView()
@@ -970,7 +987,8 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
      * plain [ImagePage.ImageSingle] has no seam, so its extent stays symmetric.
      */
     private fun pageHorizontalExtent(
-        page: ImagePage.ImageSingle, pageScale: Float
+        page: ImagePage.ImageSingle,
+        pageScale: Float,
     ): Pair<Float, Float> {
         val (leftWidth, rightWidth) = page.horizontalExtent()
         return pageScale * leftWidth to pageScale * rightWidth
@@ -982,11 +1000,18 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
      * actually is this frame - tiles then can't stand in for a live draw of it.
      */
     private class PagedAnchor(
-        val pageScale: Float, val anchorX: Float, val anchorY: Float, val pinned: Boolean
+        val pageScale: Float,
+        val anchorX: Float,
+        val anchorY: Float,
+        val pinned: Boolean,
     )
 
     private fun pagedAnchor(
-        page: ImagePage.ImageSingle, dst: GPUTexture, x: Float, y: Float, scale: Float
+        page: ImagePage.ImageSingle,
+        dst: GPUTexture,
+        x: Float,
+        y: Float,
+        scale: Float,
     ): PagedAnchor {
         // Pin the grid to the animation's target while actually scale-animating home, so
         // drawCore wipes it once instead of every interpolated frame. Gated on isScaleAnimating,
@@ -1023,7 +1048,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
         val wantL: Float,
         val wantR: Float,
         val wantT: Float,
-        val wantB: Float
+        val wantB: Float,
     )
 
     private fun gridPlacement(
@@ -1033,7 +1058,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
         anchorY: Float,
         centerYOffset: Float,
         pageScale: Float,
-        tileSize: Int
+        tileSize: Int,
     ): GridPlacement? {
         val ts = tileSize.toFloat()
         val (leftHalf, rightHalf) = pageHorizontalExtent(page, pageScale)
@@ -1053,7 +1078,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
         val clipB = snapY + centerYOffset + halfH
 
         return GridPlacement(
-            ts, snapX, snapY, clipL, clipT, clipR, clipB, wantL, wantR, wantT, wantB
+            ts, snapX, snapY, clipL, clipT, clipR, clipB, wantL, wantR, wantT, wantB,
         )
     }
 
@@ -1075,7 +1100,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
             floor(gp.wantL / ts).toInt(),
             ceil(gp.wantR / ts).toInt() - 1,
             floor(gp.wantT / ts).toInt(),
-            ceil(gp.wantB / ts).toInt() - 1
+            ceil(gp.wantB / ts).toInt() - 1,
         )
     }
 
@@ -1107,7 +1132,10 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
 
     /** As [PagedAnchor], for the continuous overloads; also carries [centerYOffset]. */
     private class ContinuousAnchor(
-        val pageScale: Float, val anchorX: Float, val anchorY: Float, val centerYOffset: Float
+        val pageScale: Float,
+        val anchorX: Float,
+        val anchorY: Float,
+        val centerYOffset: Float,
     )
 
     private fun continuousAnchor(
@@ -1117,7 +1145,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
         docTop: Float,
         pageHeight: Float,
         viewerOffsetX: Float,
-        scale: Float
+        scale: Float,
     ): ContinuousAnchor? {
         if (page.width <= 0) return null
         val pageScaleAtZoom1 = dst.width / page.width.toFloat()
@@ -1145,7 +1173,9 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
         val a = pagedAnchor(page, dst, 0f, 0f, 1f)
         if (st.contentVersion != page.contentVersion || st.scale != a.pageScale ||
             st.tileSize != preferredTileSize
-        ) return emptySet()
+        ) {
+            return emptySet()
+        }
         val gp =
             gridPlacement(page, dst, a.anchorX, a.anchorY, 0f, a.pageScale, st.tileSize)
                 ?: return null
@@ -1209,7 +1239,14 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
         // [blitAvailableTiles] uses its tiles, which reads as solid black. Shares [gridPlacement]
         // with [drawCore] now, so this can't happen again without both call sites noticing.
         writeFrameUniformIfChanged(
-            st, dst, gp.snapX, gp.snapY, gp.clipL, gp.clipT, gp.clipR, gp.clipB
+            st,
+            dst,
+            gp.snapX,
+            gp.snapY,
+            gp.clipL,
+            gp.clipT,
+            gp.clipR,
+            gp.clipB,
         )
 
         // Captured before the loop below can add to it, so this only fires the one time pending
@@ -1260,7 +1297,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
         dst: GPUTexture,
         x: Float,
         y: Float,
-        scale: Float
+        scale: Float,
     ): Boolean {
         val a = pagedAnchor(page, dst, x, y, scale)
         val covered = drawCore(
@@ -1273,7 +1310,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
             a.pageScale,
             page.isScaleAnimating,
             applyRetainWindow = true,
-            useStencilMask = true
+            useStencilMask = true,
         )
         // Never "covered" off a pinned grid: it sits at the animation's target, so the live draw
         // is the only thing showing the page where it is mid-animation.
@@ -1301,7 +1338,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
         pageHeight: Float,
         viewerOffsetX: Float,
         scale: Float,
-        suppressGeneration: Boolean
+        suppressGeneration: Boolean,
     ): Boolean {
         val a = continuousAnchor(page, dst, cameraDocY, docTop, pageHeight, viewerOffsetX, scale)
             ?: return false
@@ -1315,7 +1352,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
             a.pageScale,
             suppressGeneration,
             applyRetainWindow = false,
-            useStencilMask = true
+            useStencilMask = true,
         )
     }
 
@@ -1336,7 +1373,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
         pageScale: Float,
         suppressGeneration: Boolean,
         applyRetainWindow: Boolean,
-        useStencilMask: Boolean = false
+        useStencilMask: Boolean = false,
     ): Boolean {
         if (page.destroyed || !page.highQuality || page.isAnimated) return false
         if (!page.hasUploadedImage) return false
@@ -1406,7 +1443,14 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
         st.tyMax = ceil((dst.height - anchorY) / ts).toInt() - 1
 
         writeFrameUniformIfChanged(
-            st, dst, gp.snapX, gp.snapY, gp.clipL, gp.clipT, gp.clipR, gp.clipB
+            st,
+            dst,
+            gp.snapX,
+            gp.snapY,
+            gp.clipL,
+            gp.clipT,
+            gp.clipR,
+            gp.clipB,
         )
 
         val wanted = wantedTileRange(gp)
@@ -1465,7 +1509,10 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
      * nothing - that lives in the uniform.
      */
     private fun drawInstanced(
-        pass: GPURenderPassEncoder, format: Int, st: PageTiles, useStencilMask: Boolean
+        pass: GPURenderPassEncoder,
+        format: Int,
+        st: PageTiles,
+        useStencilMask: Boolean,
     ) {
         if (st.instancesDirty) uploadInstances(st)
         val instances = st.instances ?: return
@@ -1490,7 +1537,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
         pass: GPURenderPassEncoder,
         format: Int,
         st: PageTiles,
-        keys: List<Long>
+        keys: List<Long>,
     ) {
         var count = 0
         for (tkey in keys) if (st.tiles.containsKey(tkey)) count++
@@ -1510,8 +1557,8 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
         val instances = device.createBuffer(
             GPUBufferDescriptor(
                 size = count * INSTANCE_BYTES,
-                usage = BufferUsage.Vertex or BufferUsage.CopyDst
-            )
+                usage = BufferUsage.Vertex or BufferUsage.CopyDst,
+            ),
         )
         device.queue.writeBuffer(instances, 0, bytes.slice())
 
@@ -1538,12 +1585,13 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
     /** One bind group per grid: its own uniform, the shared atlas, the shared sampler. */
     private fun gridBindGroup(st: PageTiles): GPUBindGroup = device.createBindGroup(
         GPUBindGroupDescriptor(
-            layout = blitBindGroupLayout, entries = arrayOf(
+            layout = blitBindGroupLayout,
+            entries = arrayOf(
                 GPUBindGroupEntry(0, buffer = st.frameUniform),
                 GPUBindGroupEntry(1, textureView = atlas.view),
                 GPUBindGroupEntry(2, sampler = blitSampler),
-            )
-        )
+            ),
+        ),
     )
 
     /**
@@ -1562,8 +1610,8 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
             st.instances = device.createBuffer(
                 GPUBufferDescriptor(
                     size = capacity * INSTANCE_BYTES,
-                    usage = BufferUsage.Vertex or BufferUsage.CopyDst
-                )
+                    usage = BufferUsage.Vertex or BufferUsage.CopyDst,
+                ),
             )
             st.instanceCapacity = capacity
         }
@@ -1591,7 +1639,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
         val queries = timestampQuerySet ?: return null
         val index = TILE_SIZES.indices.firstOrNull {
             TILE_SIZES[it] != preferredTileSize && tileSamples[it] < TILE_SIZE_SAMPLES &&
-                    probeAttempts[it] < 2 * TILE_SIZE_SAMPLES
+                probeAttempts[it] < 2 * TILE_SIZE_SAMPLES
         } ?: return null
         val tileSize = TILE_SIZES[index]
 
@@ -1606,10 +1654,13 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
         val encoder = device.createCommandEncoder()
         val pass = encoder.beginRenderPass(
             clearedColorPass(
-                pool.scratchView(tileSize), timestampWrites = GPUPassTimestampWrites(
-                    queries, beginningOfPassWriteIndex = 0, endOfPassWriteIndex = 1
-                )
-            )
+                pool.scratchView(tileSize),
+                timestampWrites = GPUPassTimestampWrites(
+                    queries,
+                    beginningOfPassWriteIndex = 0,
+                    endOfPassWriteIndex = 1,
+                ),
+            ),
         )
         try {
             // The grid's anchor tile - the middle of the page, as representative as this gets.
@@ -1663,7 +1714,9 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
                             // a full atlas drops it, and a frame would requeue it.
                             if ((req.onScreen || req.state.page.isOnScreen) &&
                                 req.state.tiles.containsKey(key(req.tx, req.ty))
-                            ) visible = true
+                            ) {
+                                visible = true
+                            }
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
@@ -1733,7 +1786,9 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
         // window, so anything at or above it is a tile nobody can currently see - the margin ring
         // kept against a pan, or a grid [prewarm] filled for a page that is not on screen at all.
         return Request(
-            bestState, (bestKey shr 32).toInt(), bestKey.toInt(),
+            bestState,
+            (bestKey shr 32).toInt(),
+            bestKey.toInt(),
             onScreen = bestPriority < OFF_SCREEN_SCORE,
         )
     }
@@ -1782,21 +1837,35 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
 
         if (source == null || sourceView == null) {
             return generateTile(
-                st, tx, ty, measurementScope, staged = false, prepare = { _, _ -> }
+                st,
+                tx,
+                ty,
+                measurementScope,
+                staged = false,
+                prepare = { _, _ -> },
             ) { pass, tex ->
                 renderTileContent(st, tx, ty, st.tileSize, pass, tex)
             }
         }
 
         return generateTile(
-            st, tx, ty, measurementScope, staged = true,
+            st,
+            tx,
+            ty,
+            measurementScope,
+            staged = true,
             prepare = { encoder, timestamps ->
                 val pass = encoder.beginRenderPass(clearedColorPass(sourceView, timestamps))
                 try {
                     renderTileContent(
-                        st, tx, ty, inner, pass, source,
+                        st,
+                        tx,
+                        ty,
+                        inner,
+                        pass,
+                        source,
                         scale = rescaler.firstStepScale(st.scale),
-                        inset = rescaler.halo.toFloat()
+                        inset = rescaler.halo.toFloat(),
                     )
                 } finally {
                     pass.endAndRelease()
@@ -1865,7 +1934,9 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
      * grid's state - or null if [page] has no drawable images.
      */
     private fun drawGridForFullPage(
-        pass: GPURenderPassEncoder, page: ImagePage.ImageSingle, dst: GPUTexture
+        pass: GPURenderPassEncoder,
+        page: ImagePage.ImageSingle,
+        dst: GPUTexture,
     ): PageTiles? {
         if (page.destroyed || !page.highQuality || page.isAnimated) return null
         // This path draws cached tiles without touching the image, so it has to report for itself.
@@ -1882,7 +1953,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
             0f,
             a.pageScale,
             suppressGeneration = false,
-            applyRetainWindow = false
+            applyRetainWindow = false,
         )
 
         val st = pages[page] ?: return null
@@ -1905,7 +1976,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
                 0f,
                 a.pageScale,
                 suppressGeneration = false,
-                applyRetainWindow = false
+                applyRetainWindow = false,
             )
         }
 
@@ -1919,7 +1990,9 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
      * drawing nothing, if the page has no drawable images.
      */
     fun renderFullyTiled(
-        pass: GPURenderPassEncoder, page: ImagePage.ImageSingle, dst: GPUTexture
+        pass: GPURenderPassEncoder,
+        page: ImagePage.ImageSingle,
+        dst: GPUTexture,
     ): Boolean {
         val st = drawGridForFullPage(pass, page, dst) ?: return false
         if (st.pending.isEmpty()) return true
@@ -1941,7 +2014,9 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
      * drawable images.
      */
     fun blitAvailableTiles(
-        pass: GPURenderPassEncoder, page: ImagePage.ImageSingle, dst: GPUTexture
+        pass: GPURenderPassEncoder,
+        page: ImagePage.ImageSingle,
+        dst: GPUTexture,
     ): Boolean = drawGridForFullPage(pass, page, dst) != null
 
     /**
@@ -1956,7 +2031,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
         measurementScope: CoroutineScope,
         staged: Boolean,
         prepare: (GPUCommandEncoder, GPUPassTimestampWrites?) -> Unit,
-        render: (GPURenderPassEncoder, GPUTexture) -> Unit
+        render: (GPURenderPassEncoder, GPUTexture) -> Unit,
     ): Job? {
         val key = key(tx, ty)
         if (st.tiles.containsKey(key)) return null
@@ -1989,7 +2064,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
         measurementScope: CoroutineScope,
         staged: Boolean,
         prepare: (GPUCommandEncoder, GPUPassTimestampWrites?) -> Unit,
-        render: (GPURenderPassEncoder, GPUTexture) -> Unit
+        render: (GPURenderPassEncoder, GPUTexture) -> Unit,
     ): Job? {
         val queries = timestampQuerySet
         if (queries == null) {
@@ -2004,7 +2079,10 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
             }
             pool.copyScratchInto(encoder, origin, st.tileSize)
             device.queue.submitAndRelease(encoder)
-            st.tiles[key] = Tile(origin).also { it.lastUsed = frame; it.plain = !staged }
+            st.tiles[key] = Tile(origin).also {
+                it.lastUsed = frame
+                it.plain = !staged
+            }
             st.instancesDirty = true
             return null
         }
@@ -2023,11 +2101,12 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
             // query 0 unwritten and the elapsed time read off stale memory.
             val opening = if (staged) {
                 prepare(
-                    encoder, GPUPassTimestampWrites(
+                    encoder,
+                    GPUPassTimestampWrites(
                         queries,
                         beginningOfPassWriteIndex = 0,
-                        endOfPassWriteIndex = Constants.QUERY_SET_INDEX_UNDEFINED
-                    )
+                        endOfPassWriteIndex = Constants.QUERY_SET_INDEX_UNDEFINED,
+                    ),
                 )
                 Constants.QUERY_SET_INDEX_UNDEFINED
             } else {
@@ -2037,10 +2116,13 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
 
             val pass = encoder.beginRenderPass(
                 clearedColorPass(
-                    pool.scratchView(st.tileSize), timestampWrites = GPUPassTimestampWrites(
-                        queries, beginningOfPassWriteIndex = opening, endOfPassWriteIndex = 1
-                    )
-                )
+                    pool.scratchView(st.tileSize),
+                    timestampWrites = GPUPassTimestampWrites(
+                        queries,
+                        beginningOfPassWriteIndex = opening,
+                        endOfPassWriteIndex = 1,
+                    ),
+                ),
             )
             try {
                 render(pass, pool.scratch(st.tileSize))
@@ -2058,7 +2140,10 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
             releaseTimestampBuffers(timing)
             throw e
         }
-        st.tiles[key] = Tile(origin).also { it.lastUsed = frame; it.plain = !staged }
+        st.tiles[key] = Tile(origin).also {
+            it.lastUsed = frame
+            it.plain = !staged
+        }
         st.instancesDirty = true
 
         return measurementScope.launch { measureTileGpuTime(timing, st.tileSize) }
@@ -2105,16 +2190,18 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
     }
 
     private fun clearedColorPass(
-        view: GPUTextureView, timestampWrites: GPUPassTimestampWrites? = null
+        view: GPUTextureView,
+        timestampWrites: GPUPassTimestampWrites? = null,
     ) = GPURenderPassDescriptor(
         colorAttachments = arrayOf(
             GPURenderPassColorAttachment(
                 view = view,
                 loadOp = LoadOp.Clear,
                 storeOp = StoreOp.Store,
-                clearValue = GPUColor(0.0, 0.0, 0.0, 0.0)
-            )
-        ), timestampWrites = timestampWrites
+                clearValue = GPUColor(0.0, 0.0, 0.0, 0.0),
+            ),
+        ),
+        timestampWrites = timestampWrites,
     )
 
     /**
@@ -2130,7 +2217,7 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
         clipL: Float,
         clipT: Float,
         clipR: Float,
-        clipB: Float
+        clipB: Float,
     ) {
         val dstW = dst.width.toFloat()
         val dstH = dst.height.toFloat()
@@ -2223,7 +2310,10 @@ internal class TileRenderer(private val invalidate: () -> Unit) {
                 pages.clear()
                 atlasOrNull?.destroy()
                 atlasOrNull = null
-                timestampPool.forEach { it.resolve.destroyAndRelease(); it.result.destroyAndRelease() }
+                timestampPool.forEach {
+                    it.resolve.destroyAndRelease()
+                    it.result.destroyAndRelease()
+                }
                 timestampPool.clear()
                 for (i in 0 until STENCIL_BUFFER_COUNT) {
                     stencilViews[i]?.close()

@@ -141,11 +141,13 @@ fun ImageViewer(
                         state.onLongTap?.invoke(
                             Offset(
                                 firstDown.position.x / state.width,
-                                firstDown.position.y / state.height
-                            )
+                                firstDown.position.y / state.height,
+                            ),
                         )
                     }
-                } else null
+                } else {
+                    null
+                }
 
                 if (waitForCleanUp(firstDown.id, doubleTapTimeout, touchSlop) != null) {
                     longPressJob?.cancel()
@@ -157,10 +159,11 @@ fun ImageViewer(
                         if (state.pageOffset != 0f) {
                             state.animationJob = scope.launch {
                                 Animatable(state.pageOffset).animateTo(
-                                    0f, animationSpec = spring(
+                                    0f,
+                                    animationSpec = spring(
                                         stiffness = Spring.StiffnessMediumLow,
-                                        visibilityThreshold = 0.002f
-                                    )
+                                        visibilityThreshold = 0.002f,
+                                    ),
                                 ) {
                                     state.pageOffset = value
                                     state.invalidate()
@@ -172,8 +175,8 @@ fun ImageViewer(
                             state.onTap?.invoke(
                                 Offset(
                                     firstDown.position.x / state.width,
-                                    firstDown.position.y / state.height
-                                )
+                                    firstDown.position.y / state.height,
+                                ),
                             )
                         }
                         return@awaitEachGesture
@@ -193,11 +196,13 @@ fun ImageViewer(
                             if (!state.doubleTapZoomEnabled) return@launch
                             if (zoomPage.atHomeScale) {
                                 zoomPage.animateTo(
-                                    Offset(tapX, tapY), targetScale = zoomPage.doubleTapScale
+                                    Offset(tapX, tapY),
+                                    targetScale = zoomPage.doubleTapScale,
                                 )
                             } else {
                                 zoomPage.animateTo(
-                                    Offset(tapX, tapY), targetScale = zoomPage.homeScale
+                                    Offset(tapX, tapY),
+                                    targetScale = zoomPage.homeScale,
                                 )
                             }
                         }
@@ -233,7 +238,6 @@ fun ImageViewer(
                                     val pan = event.calculatePan()
                                     totalDeltaY += pan.y
                                     if (totalDeltaY != 0f) {
-
                                         val px = secondDown.position.x / state.width - 0.5f
                                         val py = secondDown.position.y / state.height - 0.5f
 
@@ -245,7 +249,7 @@ fun ImageViewer(
                                         page.setPos(
                                             (originalX + px * diff).orZero(),
                                             (originalY + py * diff).orZero(),
-                                            newScale
+                                            newScale,
                                         )
 
                                         change.consume()
@@ -270,7 +274,8 @@ fun ImageViewer(
                             page.animationJob = scope.launch(NormalMotionDurationScale) {
                                 try {
                                     Animatable(0f).animateDecay(
-                                        velocity.y, exponentialDecay()
+                                        velocity.y,
+                                        exponentialDecay(),
                                     ) {
                                         val px = secondDown.position.x / state.width - 0.5f
                                         val py = secondDown.position.y / state.height - 0.5f
@@ -294,7 +299,7 @@ fun ImageViewer(
                                         page.setPos(
                                             x.fastCoerceIn(minX, maxX),
                                             y.fastCoerceIn(minY, maxY),
-                                            scale
+                                            scale,
                                         )
                                         if (value != 0f && scale == prevScale) throw FlingStalled()
                                     }
@@ -308,8 +313,8 @@ fun ImageViewer(
                             page.animateTo(
                                 Offset(
                                     secondDown.position.x / state.width,
-                                    secondDown.position.y / state.height
-                                )
+                                    secondDown.position.y / state.height,
+                                ),
                             )
                         }
                     }
@@ -372,7 +377,8 @@ fun ImageViewer(
                                         velocityTracker.addPointerInputChange(change)
                                         single = false
                                         scaleOrigin = Offset(
-                                            centroid.x / state.width, centroid.y / state.height
+                                            centroid.x / state.width,
+                                            centroid.y / state.height,
                                         )
                                     }
                                 } else if (single) {
@@ -501,8 +507,8 @@ fun ImageViewer(
                                 initialVelocity = initialVelocity,
                                 animationSpec = spring(
                                     stiffness = Spring.StiffnessMediumLow,
-                                    visibilityThreshold = 0.002f
-                                )
+                                    visibilityThreshold = 0.002f,
+                                ),
                             ) {
                                 state.pageOffset = value
                                 state.invalidate()
@@ -519,11 +525,16 @@ fun ImageViewer(
                         // into (see animateTo): a pinch past either springs back, so there is
                         // no fling to start - but zoomed out below homeScale is a resting
                         // place like any other, and pans there like any other.
-                        if ((page.scale >= page.minScale) && (page.scale <= page.maxScale) && (lastEventTime - lastMoveTime) < 100 && (abs(
-                                velocity.x
-                            ) > minFlingVelocity || abs(velocity.y) > minFlingVelocity) && (page.x.fastCoerceIn(
-                                minX, maxX
-                            ) == page.x || page.y.fastCoerceIn(minY, maxY) == page.y)
+                        if ((page.scale >= page.minScale) && (page.scale <= page.maxScale) && (lastEventTime - lastMoveTime) < 100 && (
+                                abs(
+                                    velocity.x,
+                                ) > minFlingVelocity || abs(velocity.y) > minFlingVelocity
+                                ) && (
+                                page.x.fastCoerceIn(
+                                    minX,
+                                    maxX,
+                                ) == page.x || page.y.fastCoerceIn(minY, maxY) == page.y
+                                )
                         ) {
                             // fling pan
                             page.animationJob = scope.launch(NormalMotionDurationScale) {
@@ -533,7 +544,7 @@ fun ImageViewer(
                                     var lastOffset = Offset.Zero
                                     fling.animateDecay(
                                         Offset(velocity.x, velocity.y),
-                                        exponentialDecay<Offset>()
+                                        exponentialDecay<Offset>(),
                                     ) {
                                         val delta = value - lastOffset
                                         lastOffset = value

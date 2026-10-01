@@ -25,7 +25,7 @@ object ImageUtil {
         pixels: ByteBuffer,
         dstPixels: ByteBuffer,
         width: Int,
-        height: Int
+        height: Int,
     )
 
     /** As [resizeLinearAreaNative], to [dstWidth] x [dstHeight] at 4 B/px. */
@@ -35,7 +35,7 @@ object ImageUtil {
         width: Int,
         height: Int,
         dstWidth: Int,
-        dstHeight: Int
+        dstHeight: Int,
     )
 
     /**
@@ -48,7 +48,7 @@ object ImageUtil {
         pixels: ByteBuffer,
         dstPixels: ByteBuffer,
         width: Int,
-        height: Int
+        height: Int,
     )
 
     /** As [resizeLinearAreaNativeF16], to [dstWidth] x [dstHeight] at 8 B/px. */
@@ -58,7 +58,7 @@ object ImageUtil {
         width: Int,
         height: Int,
         dstWidth: Int,
-        dstHeight: Int
+        dstHeight: Int,
     )
 
     /**
@@ -171,7 +171,11 @@ object ImageUtil {
 
     /** [resize] to [dstWidth] x [dstHeight] rather than half. */
     fun resize(
-        source: ByteBuffer, width: Int, height: Int, dstWidth: Int, dstHeight: Int
+        source: ByteBuffer,
+        width: Int,
+        height: Int,
+        dstWidth: Int,
+        dstHeight: Int,
     ): ByteBuffer {
         val output = directBuffer(dstWidth, dstHeight, 4)
         resizeLinearAreaToNative(source, output, width, height, dstWidth, dstHeight)
@@ -188,7 +192,11 @@ object ImageUtil {
 
     /** [resizeF16] to [dstWidth] x [dstHeight] rather than half. */
     fun resizeF16(
-        source: ByteBuffer, width: Int, height: Int, dstWidth: Int, dstHeight: Int
+        source: ByteBuffer,
+        width: Int,
+        height: Int,
+        dstWidth: Int,
+        dstHeight: Int,
     ): ByteBuffer {
         val output = directBuffer(dstWidth, dstHeight, 8)
         resizeLinearAreaToNativeF16(source, output, width, height, dstWidth, dstHeight)

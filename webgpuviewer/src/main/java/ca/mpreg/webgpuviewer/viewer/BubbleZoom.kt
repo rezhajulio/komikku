@@ -88,13 +88,15 @@ internal class BubbleOverlay(
                 size = GPUExtent3D(maskWidth, maskHeight),
                 format = TextureFormat.R8Unorm,
                 usage = TextureUsage.TextureBinding or TextureUsage.CopyDst,
-            )
+            ),
         )
         val data = ByteBuffer.allocateDirect(mask.size).order(ByteOrder.nativeOrder())
         data.put(mask).flip()
         device.queue.writeTexture(
             dataLayout = GPUTexelCopyBufferLayout(
-                offset = 0L, bytesPerRow = maskWidth, rowsPerImage = maskHeight
+                offset = 0L,
+                bytesPerRow = maskWidth,
+                rowsPerImage = maskHeight,
             ),
             data = data,
             destination = GPUTexelCopyTextureInfo(texture = texture),
@@ -162,10 +164,14 @@ internal object BubbleZoom {
             if (hit != null) return@forEachImage
             // As ImageSingle.forEachPlacedImage, at the page's own transform.
             val placeX = (page.x + offsetX / screenWidth + WebGpuRenderer.offsetX) / imageScale -
-                    WebGpuRenderer.offsetX
+                WebGpuRenderer.offsetX
             val placeY = (page.y + WebGpuRenderer.offsetY) / imageScale - WebGpuRenderer.offsetY
             val rect = image.placement(
-                screenWidth, screenHeight, placeX, placeY, page.scale * imageScale
+                screenWidth,
+                screenHeight,
+                placeX,
+                placeY,
+                page.scale * imageScale,
             )
             if (tapX >= rect[0] && tapX < rect[2] && tapY >= rect[1] && tapY < rect[3]) {
                 hit = image to rect
@@ -233,15 +239,17 @@ internal object BubbleZoom {
         var seedY = y
         var seedLuma = map[x, y]
         if (seedLuma < MIN_SEED_LUMA) {
-            for (dy in -SEED_RADIUS..SEED_RADIUS) for (dx in -SEED_RADIUS..SEED_RADIUS) {
-                val px = x + dx
-                val py = y + dy
-                if (px !in 0 until w || py !in 0 until h) continue
-                val l = map[px, py]
-                if (l > seedLuma) {
-                    seedLuma = l
-                    seedX = px
-                    seedY = py
+            for (dy in -SEED_RADIUS..SEED_RADIUS) {
+                for (dx in -SEED_RADIUS..SEED_RADIUS) {
+                    val px = x + dx
+                    val py = y + dy
+                    if (px !in 0 until w || py !in 0 until h) continue
+                    val l = map[px, py]
+                    if (l > seedLuma) {
+                        seedLuma = l
+                        seedX = px
+                        seedY = py
+                    }
                 }
             }
             if (seedLuma < MIN_SEED_LUMA) return null
@@ -289,10 +297,12 @@ internal object BubbleZoom {
         val ox = x0 - (OUTLINE + 1)
         val oy = y0 - (OUTLINE + 1)
         val shape = BooleanArray(outW * outH)
-        for (sy in 0 until outH) for (sx in 0 until outW) {
-            val mx = ox + sx
-            val my = oy + sy
-            if (mx in 0 until w && my in 0 until h && inside[my * w + mx]) shape[sy * outW + sx] = true
+        for (sy in 0 until outH) {
+            for (sx in 0 until outW) {
+                val mx = ox + sx
+                val my = oy + sy
+                if (mx in 0 until w && my in 0 until h && inside[my * w + mx]) shape[sy * outW + sx] = true
+            }
         }
         val outside = BooleanArray(outW * outH)
         val q2 = IntArray(outW * outH)
@@ -334,12 +344,16 @@ internal object BubbleZoom {
 
         // Grow by the outline, square brush.
         val mask = ByteArray(outW * outH)
-        for (sy in 0 until outH) for (sx in 0 until outW) {
-            if (outside[sy * outW + sx]) continue
-            for (dy in -OUTLINE..OUTLINE) for (dx in -OUTLINE..OUTLINE) {
-                val tx = sx + dx
-                val ty = sy + dy
-                if (tx in 0 until outW && ty in 0 until outH) mask[ty * outW + tx] = 0xFF.toByte()
+        for (sy in 0 until outH) {
+            for (sx in 0 until outW) {
+                if (outside[sy * outW + sx]) continue
+                for (dy in -OUTLINE..OUTLINE) {
+                    for (dx in -OUTLINE..OUTLINE) {
+                        val tx = sx + dx
+                        val ty = sy + dy
+                        if (tx in 0 until outW && ty in 0 until outH) mask[ty * outW + tx] = 0xFF.toByte()
+                    }
+                }
             }
         }
         return Found(ox, oy, outW, outH, mask)
@@ -382,7 +396,7 @@ internal object BubbleZoom {
 
     private val sampler by lazy {
         WebGpuRenderer.device.createSampler(
-            GPUSamplerDescriptor(magFilter = FilterMode.Linear, minFilter = FilterMode.Linear)
+            GPUSamplerDescriptor(magFilter = FilterMode.Linear, minFilter = FilterMode.Linear),
         )
     }
 
@@ -402,7 +416,7 @@ internal object BubbleZoom {
                 size = GPUExtent3D(dst.width, dst.height),
                 format = dst.format,
                 usage = TextureUsage.RenderAttachment or TextureUsage.TextureBinding,
-            )
+            ),
         ).also {
             zoomTexture = it
             zoomView = it.createView()
@@ -420,7 +434,7 @@ internal object BubbleZoom {
     private val pipelines = FormatKeyed { format ->
         val device = WebGpuRenderer.device
         val module = device.createShaderModule(
-            GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(SHADER))
+            GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(SHADER)),
         )
         // Premultiplied out, like the page it is drawn over.
         val over = GPUBlendComponent(
@@ -432,14 +446,17 @@ internal object BubbleZoom {
             GPURenderPipelineDescriptor(
                 vertex = GPUVertexState(module, entryPoint = "vs_main"),
                 fragment = GPUFragmentState(
-                    module, entryPoint = "fs_main", targets = arrayOf(
+                    module,
+                    entryPoint = "fs_main",
+                    targets = arrayOf(
                         GPUColorTargetState(
-                            format = format, blend = GPUBlendState(color = over, alpha = over)
-                        )
-                    )
+                            format = format,
+                            blend = GPUBlendState(color = over, alpha = over),
+                        ),
+                    ),
                 ),
                 primitive = GPUPrimitiveState(topology = TriangleList),
-            )
+            ),
         )
     }
 
@@ -471,9 +488,9 @@ internal object BubbleZoom {
                         loadOp = LoadOp.Clear,
                         storeOp = StoreOp.Store,
                         clearValue = GPUColor(0.0, 0.0, 0.0, 0.0),
-                    )
-                )
-            )
+                    ),
+                ),
+            ),
         )
         try {
             val dx = (cx - 0.5f + zoom * (0.5f - bubble.centerX)) / (zoom * page.scale)
@@ -504,8 +521,9 @@ internal object BubbleZoom {
         val device = WebGpuRenderer.device
         val uniforms = device.createBuffer(
             GPUBufferDescriptor(
-                size = UNIFORM_SIZE.toLong(), usage = BufferUsage.Uniform or BufferUsage.CopyDst
-            )
+                size = UNIFORM_SIZE.toLong(),
+                usage = BufferUsage.Uniform or BufferUsage.CopyDst,
+            ),
         )
         device.queue.writeBuffer(uniforms, 0, byteBuffer)
 
@@ -518,24 +536,26 @@ internal object BubbleZoom {
                         loadOp = LoadOp.Load,
                         storeOp = StoreOp.Store,
                         clearValue = GPUColor(0.0, 0.0, 0.0, 0.0),
-                    )
-                )
-            )
+                    ),
+                ),
+            ),
         )
         try {
             val pipeline = pipelines[dst.format]
             pass.setPipeline(pipeline)
             pass.setTransientBindGroup(
-                0, device.createBindGroup(
+                0,
+                device.createBindGroup(
                     GPUBindGroupDescriptor(
-                        layout = pipeline.groupLayout(), entries = arrayOf(
+                        layout = pipeline.groupLayout(),
+                        entries = arrayOf(
                             GPUBindGroupEntry(0, buffer = uniforms),
                             GPUBindGroupEntry(1, textureView = zoomView!!),
                             GPUBindGroupEntry(2, textureView = bubble.maskView()),
                             GPUBindGroupEntry(3, sampler = sampler),
-                        )
-                    )
-                )
+                        ),
+                    ),
+                ),
             )
             pass.draw(6)
         } finally {

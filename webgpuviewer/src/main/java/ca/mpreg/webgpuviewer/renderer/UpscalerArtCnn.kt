@@ -130,22 +130,27 @@ class UpscalerArtCnn : Upscaler() {
         built ?: PASSES.map { (name, code) ->
             device.createComputePipeline(
                 GPUComputePipelineDescriptor(
-                    label = "$LABEL $name", compute = GPUComputeState(
+                    label = "$LABEL $name",
+                    compute = GPUComputeState(
                         device.createShaderModule(
                             GPUShaderModuleDescriptor(
-                                label = name, shaderSourceWGSL = GPUShaderSourceWGSL(code)
-                            )
-                        ), entryPoint = "main"
-                    )
-                )
+                                label = name,
+                                shaderSourceWGSL = GPUShaderSourceWGSL(code),
+                            ),
+                        ),
+                        entryPoint = "main",
+                    ),
+                ),
             )
         }.also { built = it }
 
     private val sampler: GPUSampler by lazy {
         device.createSampler(
             GPUSamplerDescriptor(
-                label = LABEL, magFilter = FilterMode.Linear, minFilter = FilterMode.Linear
-            )
+                label = LABEL,
+                magFilter = FilterMode.Linear,
+                minFilter = FilterMode.Linear,
+            ),
         )
     }
 
@@ -163,7 +168,9 @@ class UpscalerArtCnn : Upscaler() {
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     return textureLoad(src, vec2<i32>(in.position.xy) + ${factor * halo}, 0);
 }
-""", format, "$LABEL resolve"
+""",
+            format,
+            "$LABEL resolve",
         )
     }
 
@@ -173,7 +180,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     /** One dispatch, with the bindings it never changes. */
     private class Pass(
-        val pipeline: GPUComputePipeline, val bindGroup: GPUBindGroup, val groups: Int
+        val pipeline: GPUComputePipeline,
+        val bindGroup: GPUBindGroup,
+        val groups: Int,
     )
 
     /**
@@ -181,7 +190,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
      * tile size changes, which [TileRenderer] holds still while a staged rescaler runs.
      */
     private inner class Textures(
-        val size: Int, val format: Int, built: List<GPUComputePipeline>
+        val size: Int,
+        val format: Int,
+        built: List<GPUComputePipeline>,
     ) {
         /** What the first step draws into - the tile's own format, since it is a colour target. */
         val input = colour(size, format)
@@ -224,14 +235,17 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             )
             resolveGroup = device.createBindGroup(
                 GPUBindGroupDescriptor(
-                    layout = resolvePipelines[format].groupLayout(), label = LABEL,
-                    entries = arrayOf(GPUBindGroupEntry(0, textureView = f1))
-                )
+                    layout = resolvePipelines[format].groupLayout(),
+                    label = LABEL,
+                    entries = arrayOf(GPUBindGroupEntry(0, textureView = f1)),
+                ),
             )
         }
 
         private fun pass(
-            pipeline: GPUComputePipeline, groups: Int, vararg bindings: Any
+            pipeline: GPUComputePipeline,
+            groups: Int,
+            vararg bindings: Any,
         ): Pass {
             val entries = Array(bindings.size) { i ->
                 when (val binding = bindings[i]) {
@@ -241,28 +255,34 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 }
             }
             return Pass(
-                pipeline, device.createBindGroup(
+                pipeline,
+                device.createBindGroup(
                     GPUBindGroupDescriptor(
-                        layout = pipeline.groupLayout(), label = LABEL, entries = entries
-                    )
-                ), groups
+                        layout = pipeline.groupLayout(),
+                        label = LABEL,
+                        entries = entries,
+                    ),
+                ),
+                groups,
             )
         }
 
         private fun colour(side: Int, format: Int) = device.createTexture(
             GPUTextureDescriptor(
-                label = "$LABEL input", size = GPUExtent3D(side, side),
+                label = "$LABEL input",
+                size = GPUExtent3D(side, side),
                 format = format,
                 usage = TextureUsage.RenderAttachment or TextureUsage.TextureBinding,
-            )
+            ),
         )
 
         private fun feature(side: Int) = device.createTexture(
             GPUTextureDescriptor(
-                label = "$LABEL feature", size = GPUExtent3D(side, side),
+                label = "$LABEL feature",
+                size = GPUExtent3D(side, side),
                 format = TextureFormat.RGBA16Float,
                 usage = TextureUsage.StorageBinding or TextureUsage.TextureBinding,
-            )
+            ),
         )
 
         fun destroy() {

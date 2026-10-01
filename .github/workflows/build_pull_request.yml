@@ -35,6 +35,10 @@ jobs:
           fetch-depth: 0
 
       - name: Dependency Review
+        # The dependency graph is not enabled on this repo, so this step
+        # hard-fails instead of reviewing. Keep it advisory until the repo
+        # owner enables it under Settings > Code security.
+        continue-on-error: true
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
 
       - name: Validate Gradle Wrapper

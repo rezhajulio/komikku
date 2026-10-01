@@ -43,18 +43,20 @@ object TransitionFade : Transition() {
     private val blendPipelines = FormatKeyed { format ->
         val device = WebGpuRenderer.device
         val shaderModule = device.createShaderModule(
-            GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(BLEND_SHADER))
+            GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(BLEND_SHADER)),
         )
         device.createRenderPipeline(
             GPURenderPipelineDescriptor(
                 vertex = GPUVertexState(shaderModule, entryPoint = "vs_main"),
                 fragment = GPUFragmentState(
-                    shaderModule, entryPoint = "fs_main", targets = arrayOf(
-                        GPUColorTargetState(format = format)
-                    )
+                    shaderModule,
+                    entryPoint = "fs_main",
+                    targets = arrayOf(
+                        GPUColorTargetState(format = format),
+                    ),
                 ),
                 primitive = GPUPrimitiveState(topology = TriangleList),
-            )
+            ),
         )
     }
 
@@ -138,7 +140,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         cachedView2: GPUTextureView?,
         bg1: Int,
         bg2: Int,
-        blend: Float
+        blend: Float,
     ) {
         if (cachedView1 == null || cachedView2 == null) return
 
@@ -153,7 +155,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         byteBuffer.flip()
 
         val uniformBuffer = WebGpuRenderer.device.createBuffer(
-            GPUBufferDescriptor(size = 48, usage = BufferUsage.Uniform or BufferUsage.CopyDst)
+            GPUBufferDescriptor(size = 48, usage = BufferUsage.Uniform or BufferUsage.CopyDst),
         )
         WebGpuRenderer.device.queue.writeBuffer(uniformBuffer, 0, byteBuffer)
 
@@ -165,26 +167,27 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                         view = targetView,
                         loadOp = LoadOp.Clear,
                         storeOp = StoreOp.Store,
-                        clearValue = GPUColor(0.0, 0.0, 0.0, 0.0)
-                    )
-                )
-            )
+                        clearValue = GPUColor(0.0, 0.0, 0.0, 0.0),
+                    ),
+                ),
+            ),
         )
 
         val blendPipeline = blendPipelines[dst.format]
         pass.setPipeline(blendPipeline)
         pass.setTransientBindGroup(
-            0, WebGpuRenderer.device.createBindGroup(
+            0,
+            WebGpuRenderer.device.createBindGroup(
                 GPUBindGroupDescriptor(
                     layout = blendPipeline.groupLayout(),
                     entries = arrayOf(
                         GPUBindGroupEntry(0, buffer = uniformBuffer),
                         GPUBindGroupEntry(1, textureView = cachedView1),
                         GPUBindGroupEntry(2, textureView = cachedView2),
-                        GPUBindGroupEntry(3, sampler = blendSampler)
-                    )
-                )
-            )
+                        GPUBindGroupEntry(3, sampler = blendSampler),
+                    ),
+                ),
+            ),
         )
         pass.draw(6)
         pass.endAndRelease(targetView, uniformBuffer)

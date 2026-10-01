@@ -53,7 +53,7 @@ object TransitionCube : Transition() {
             GPUSamplerDescriptor(
                 magFilter = FilterMode.Linear,
                 minFilter = FilterMode.Linear,
-            )
+            ),
         )
     }
 
@@ -129,10 +129,22 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     private const val FACE_DEPTH = FOV / (FOV - 1f)
 
     private fun mat4(
-        m00: Float, m01: Float, m02: Float, m03: Float,
-        m10: Float, m11: Float, m12: Float, m13: Float,
-        m20: Float, m21: Float, m22: Float, m23: Float,
-        m30: Float, m31: Float, m32: Float, m33: Float,
+        m00: Float,
+        m01: Float,
+        m02: Float,
+        m03: Float,
+        m10: Float,
+        m11: Float,
+        m12: Float,
+        m13: Float,
+        m20: Float,
+        m21: Float,
+        m22: Float,
+        m23: Float,
+        m30: Float,
+        m31: Float,
+        m32: Float,
+        m33: Float,
     ) = floatArrayOf(
         m00, m01, m02, m03,
         m10, m11, m12, m13,
@@ -257,10 +269,18 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         val faceHeight = dst.height.toFloat()
 
         val frontMat = buildFaceMatrix(
-            rotAngle, screenAspect, faceWidth, faceHeight, isSide = false,
+            rotAngle,
+            screenAspect,
+            faceWidth,
+            faceHeight,
+            isSide = false,
         )
         val sideMat = buildFaceMatrix(
-            rotAngle, screenAspect, faceWidth, faceHeight, isSide = true,
+            rotAngle,
+            screenAspect,
+            faceWidth,
+            faceHeight,
+            isSide = true,
         )
 
         // Both faces load rather than clear, so that the second doesn't erase the first, and the
@@ -329,7 +349,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         byteBuffer.flip()
 
         val uniformBuffer = device.createBuffer(
-            GPUBufferDescriptor(size = 64, usage = BufferUsage.Uniform or BufferUsage.CopyDst)
+            GPUBufferDescriptor(size = 64, usage = BufferUsage.Uniform or BufferUsage.CopyDst),
         )
         device.queue.writeBuffer(uniformBuffer, 0, byteBuffer)
 
@@ -341,24 +361,26 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                         view = targetView,
                         loadOp = LoadOp.Load,
                         storeOp = StoreOp.Store,
-                        clearValue = GPUColor(0.0, 0.0, 0.0, 0.0)
-                    )
-                )
-            )
+                        clearValue = GPUColor(0.0, 0.0, 0.0, 0.0),
+                    ),
+                ),
+            ),
         )
 
         val pipeline = pipelines[dst.format]
         pass.setPipeline(pipeline)
         pass.setTransientBindGroup(
-            0, device.createBindGroup(
+            0,
+            device.createBindGroup(
                 GPUBindGroupDescriptor(
-                    layout = pipeline.groupLayout(), entries = arrayOf(
+                    layout = pipeline.groupLayout(),
+                    entries = arrayOf(
                         GPUBindGroupEntry(0, buffer = uniformBuffer),
                         GPUBindGroupEntry(1, textureView = cachedView),
                         GPUBindGroupEntry(2, sampler = faceSampler),
-                    )
-                )
-            )
+                    ),
+                ),
+            ),
         )
 
         pass.draw(6144)

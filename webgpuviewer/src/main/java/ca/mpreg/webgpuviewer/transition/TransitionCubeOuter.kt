@@ -16,10 +16,22 @@ object TransitionCubeOuter : Transition() {
     private const val FACE_DEPTH = FOV / (FOV - 1f)
 
     private fun mat4(
-        m00: Float, m01: Float, m02: Float, m03: Float,
-        m10: Float, m11: Float, m12: Float, m13: Float,
-        m20: Float, m21: Float, m22: Float, m23: Float,
-        m30: Float, m31: Float, m32: Float, m33: Float,
+        m00: Float,
+        m01: Float,
+        m02: Float,
+        m03: Float,
+        m10: Float,
+        m11: Float,
+        m12: Float,
+        m13: Float,
+        m20: Float,
+        m21: Float,
+        m22: Float,
+        m23: Float,
+        m30: Float,
+        m31: Float,
+        m32: Float,
+        m33: Float,
     ) = floatArrayOf(
         m00, m01, m02, m03,
         m10, m11, m12, m13,
@@ -139,10 +151,18 @@ object TransitionCubeOuter : Transition() {
         val faceHeight = dst.height.toFloat()
 
         val frontMat = buildFaceMatrix(
-            rotAngle, screenAspect, faceWidth, faceHeight, isSide = false,
+            rotAngle,
+            screenAspect,
+            faceWidth,
+            faceHeight,
+            isSide = false,
         )
         val sideMat = buildFaceMatrix(
-            rotAngle, screenAspect, faceWidth, faceHeight, isSide = true,
+            rotAngle,
+            screenAspect,
+            faceWidth,
+            faceHeight,
+            isSide = true,
         )
 
         // The cube never covers the whole surface, and getCurrentTexture hands back a rotating set

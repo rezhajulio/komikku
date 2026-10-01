@@ -74,8 +74,10 @@ abstract class FilterFullscreen : Filter() {
 
         val group = device.createBindGroup(
             GPUBindGroupDescriptor(
-                layout = pipeline.groupLayout(), label = label, entries = entries(src)
-            )
+                layout = pipeline.groupLayout(),
+                label = label,
+                entries = entries(src),
+            ),
         )
         boundHandles[nextBindGroup] = handle
         // Evicted: a pass that used it holds its own reference, so ours can go.

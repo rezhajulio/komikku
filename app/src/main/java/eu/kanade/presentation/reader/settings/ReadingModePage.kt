@@ -18,14 +18,14 @@ import eu.kanade.tachiyomi.ui.reader.viewer.webtoon.WebtoonViewer
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import tachiyomi.presentation.core.components.CheckboxItem
 import tachiyomi.presentation.core.components.HeadingItem
 import tachiyomi.presentation.core.components.SettingsChipRow
 import tachiyomi.presentation.core.components.SliderItem
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 import java.text.NumberFormat
 
 @Composable
@@ -60,7 +60,7 @@ internal fun ReadingModePage(screenModel: ReaderSettingsScreenModel) {
     if (viewer is WebGpuViewer) {
         WebGpuViewerSettings(screenModel)
     } else if (viewer is WebtoonViewer) {
-    // KMK <--
+        // KMK <--
         WebtoonViewerSettings(
             screenModel,
             // KMK -->

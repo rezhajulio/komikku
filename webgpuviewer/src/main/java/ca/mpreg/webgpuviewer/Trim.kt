@@ -57,7 +57,7 @@ class Trim {
             width: Int,
             height: Int,
             colors: List<FloatArray>,
-            threshold: Float
+            threshold: Float,
         ): List<Rect> {
             require(colors.isNotEmpty()) { "colors must not be empty" }
             require(colors.all { it.size >= 3 }) { "each color must have at least 3 elements [r, g, b]" }
@@ -92,7 +92,7 @@ class Trim {
             width: Int,
             height: Int,
             colors: List<FloatArray>,
-            threshold: Float
+            threshold: Float,
         ): Rect = findAllCpu(pixels, width, height, colors, threshold)
             .minByOrNull { it.width().toLong() * it.height() } ?: Rect(0, 0, width, height)
 
@@ -104,7 +104,7 @@ class Trim {
             pixels: ByteBuffer,
             width: Int,
             height: Int,
-            threshold: Float = 0.05f
+            threshold: Float = 0.05f,
         ): Int {
             if (!pixels.isDirect) {
                 Log.w(TAG, "detectBackgroundCpu: pixels not direct, defaulting to white")
@@ -119,7 +119,7 @@ class Trim {
          */
         suspend fun detectBackgroundInContext(
             image: Image,
-            threshold: Float = 0.05f
+            threshold: Float = 0.05f,
         ): Int {
             if (image.mipmaps.isEmpty()) return 0xFFFFFFFF.toInt()
             val mipmap = image.mipmaps[0]
@@ -140,8 +140,8 @@ class Trim {
                             dispatchEdgeDetect(
                                 mipmap.textures[idx],
                                 Edge.LEFT,
-                                threshold
-                            )
+                                threshold,
+                            ),
                         )
                     }
                 }
@@ -154,8 +154,8 @@ class Trim {
                             dispatchEdgeDetect(
                                 mipmap.textures[idx],
                                 Edge.RIGHT,
-                                threshold
-                            )
+                                threshold,
+                            ),
                         )
                     }
                 }
@@ -168,8 +168,8 @@ class Trim {
                             dispatchEdgeDetect(
                                 mipmap.textures[idx],
                                 Edge.TOP,
-                                threshold
-                            )
+                                threshold,
+                            ),
                         )
                     }
                 }
@@ -182,8 +182,8 @@ class Trim {
                             dispatchEdgeDetect(
                                 mipmap.textures[idx],
                                 Edge.BOTTOM,
-                                threshold
-                            )
+                                threshold,
+                            ),
                         )
                     }
                 }
@@ -201,7 +201,7 @@ class Trim {
                         leftResults.awaitAll(),
                         rightResults.awaitAll(),
                         topResults.awaitAll(),
-                        bottomResults.awaitAll()
+                        bottomResults.awaitAll(),
                     )
 
                     // Collect solid edges with their colors
@@ -266,46 +266,46 @@ class Trim {
             val total: Int,
             val sumR: Float,
             val sumG: Float,
-            val sumB: Float
+            val sumB: Float,
         )
 
         private val edgeDetectModule by lazy {
             device.createShaderModule(
                 GPUShaderModuleDescriptor(
-                    shaderSourceWGSL = GPUShaderSourceWGSL(EDGE_DETECT_SHADER)
-                )
+                    shaderSourceWGSL = GPUShaderSourceWGSL(EDGE_DETECT_SHADER),
+                ),
             )
         }
 
         private val pipelineEdgeLeft by lazy {
             device.createComputePipeline(
                 GPUComputePipelineDescriptor(
-                    GPUComputeState(module = edgeDetectModule, entryPoint = "edge_left")
-                )
+                    GPUComputeState(module = edgeDetectModule, entryPoint = "edge_left"),
+                ),
             )
         }
 
         private val pipelineEdgeRight by lazy {
             device.createComputePipeline(
                 GPUComputePipelineDescriptor(
-                    GPUComputeState(module = edgeDetectModule, entryPoint = "edge_right")
-                )
+                    GPUComputeState(module = edgeDetectModule, entryPoint = "edge_right"),
+                ),
             )
         }
 
         private val pipelineEdgeTop by lazy {
             device.createComputePipeline(
                 GPUComputePipelineDescriptor(
-                    GPUComputeState(module = edgeDetectModule, entryPoint = "edge_top")
-                )
+                    GPUComputeState(module = edgeDetectModule, entryPoint = "edge_top"),
+                ),
             )
         }
 
         private val pipelineEdgeBottom by lazy {
             device.createComputePipeline(
                 GPUComputePipelineDescriptor(
-                    GPUComputeState(module = edgeDetectModule, entryPoint = "edge_bottom")
-                )
+                    GPUComputeState(module = edgeDetectModule, entryPoint = "edge_bottom"),
+                ),
             )
         }
 
@@ -319,7 +319,7 @@ class Trim {
         private fun dispatchEdgeDetect(
             texture: GPUTexture,
             edge: Edge,
-            threshold: Float
+            threshold: Float,
         ): Deferred<EdgeResult> {
             val pipeline = when (edge) {
                 Edge.LEFT -> pipelineEdgeLeft
@@ -330,20 +330,22 @@ class Trim {
 
             val uniformBuffer = device.createBuffer(
                 GPUBufferDescriptor(
-                    size = 16, usage = BufferUsage.Uniform or BufferUsage.CopyDst
-                )
+                    size = 16,
+                    usage = BufferUsage.Uniform or BufferUsage.CopyDst,
+                ),
             )
             // Result: sum_r, sum_g, sum_b, total, sum_sq_r, sum_sq_g, sum_sq_b, padding (8 x u32 = 32 bytes)
             val resultBuffer = device.createBuffer(
                 GPUBufferDescriptor(
                     size = 32,
-                    usage = BufferUsage.Storage or BufferUsage.CopySrc or BufferUsage.CopyDst
-                )
+                    usage = BufferUsage.Storage or BufferUsage.CopySrc or BufferUsage.CopyDst,
+                ),
             )
             val stagingBuffer = device.createBuffer(
                 GPUBufferDescriptor(
-                    size = 32, usage = BufferUsage.CopyDst or BufferUsage.MapRead
-                )
+                    size = 32,
+                    usage = BufferUsage.CopyDst or BufferUsage.MapRead,
+                ),
             )
 
             val byteBuffer = edgeUniformByteBuffer.get()
@@ -367,15 +369,17 @@ class Trim {
             val pass = encoder.beginComputePass()
             pass.setPipeline(pipeline)
             pass.setTransientBindGroup(
-                0, device.createBindGroup(
+                0,
+                device.createBindGroup(
                     GPUBindGroupDescriptor(
-                        layout = pipeline.groupLayout(), entries = arrayOf(
+                        layout = pipeline.groupLayout(),
+                        entries = arrayOf(
                             GPUBindGroupEntry(0, textureView = targetView),
                             GPUBindGroupEntry(1, buffer = resultBuffer),
                             GPUBindGroupEntry(2, buffer = uniformBuffer),
-                        )
-                    )
-                )
+                        ),
+                    ),
+                ),
             )
 
             val dispatchSize = when (edge) {
@@ -448,7 +452,8 @@ class Trim {
                         resultBuffer.destroyAndRelease()
                         stagingBuffer.destroyAndRelease()
                     }
-                })
+                },
+            )
 
             return res
         }
@@ -690,51 +695,51 @@ fn find_bottom(@builtin(global_invocation_id) global_id: vec3<u32>) {
                     GPUComputeState(
                         device.createShaderModule(
                             GPUShaderModuleDescriptor(
-                                shaderSourceWGSL = GPUShaderSourceWGSL(TRIM_SHADER)
-                            )
-                        )
-                    )
-                )
+                                shaderSourceWGSL = GPUShaderSourceWGSL(TRIM_SHADER),
+                            ),
+                        ),
+                    ),
+                ),
             )
         }
 
         private val singleModule by lazy {
             device.createShaderModule(
                 GPUShaderModuleDescriptor(
-                    shaderSourceWGSL = GPUShaderSourceWGSL(TRIM_SHADER_SINGLE)
-                )
+                    shaderSourceWGSL = GPUShaderSourceWGSL(TRIM_SHADER_SINGLE),
+                ),
             )
         }
 
         private val pipelineLeft: GPUComputePipeline by lazy {
             device.createComputePipeline(
                 GPUComputePipelineDescriptor(
-                    GPUComputeState(module = singleModule, entryPoint = "find_left")
-                )
+                    GPUComputeState(module = singleModule, entryPoint = "find_left"),
+                ),
             )
         }
 
         private val pipelineRight: GPUComputePipeline by lazy {
             device.createComputePipeline(
                 GPUComputePipelineDescriptor(
-                    GPUComputeState(module = singleModule, entryPoint = "find_right")
-                )
+                    GPUComputeState(module = singleModule, entryPoint = "find_right"),
+                ),
             )
         }
 
         private val pipelineTop: GPUComputePipeline by lazy {
             device.createComputePipeline(
                 GPUComputePipelineDescriptor(
-                    GPUComputeState(module = singleModule, entryPoint = "find_top")
-                )
+                    GPUComputeState(module = singleModule, entryPoint = "find_top"),
+                ),
             )
         }
 
         private val pipelineBottom: GPUComputePipeline by lazy {
             device.createComputePipeline(
                 GPUComputePipelineDescriptor(
-                    GPUComputeState(module = singleModule, entryPoint = "find_bottom")
-                )
+                    GPUComputeState(module = singleModule, entryPoint = "find_bottom"),
+                ),
             )
         }
 
@@ -759,7 +764,7 @@ fn find_bottom(@builtin(global_invocation_id) global_id: vec3<u32>) {
         suspend fun findInContext(
             image: Image,
             colors: List<FloatArray>,
-            threshold: Float
+            threshold: Float,
         ): Rect {
             val results = colors.map { color ->
                 findInContext(image, color[0], color[1], color[2], threshold)
@@ -788,7 +793,7 @@ fn find_bottom(@builtin(global_invocation_id) global_id: vec3<u32>) {
             r: Float,
             g: Float,
             b: Float,
-            threshold: Float
+            threshold: Float,
         ): Rect {
             if (image.mipmaps.isEmpty()) {
                 Log.w(TAG, "findInContext: image has no mipmaps, returning full bounds")
@@ -816,7 +821,10 @@ fn find_bottom(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
         private suspend fun findSingleTile(
             texture: GPUTexture,
-            r: Float, g: Float, b: Float, threshold: Float
+            r: Float,
+            g: Float,
+            b: Float,
+            threshold: Float,
         ): Rect = coroutineScope {
             val res = dispatchTrimCompute(texture, pipelineAll, r, g, b, threshold)
 
@@ -836,7 +844,10 @@ fn find_bottom(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
         private suspend fun findMultiTile(
             mipmap: Mipmap,
-            r: Float, g: Float, b: Float, threshold: Float
+            r: Float,
+            g: Float,
+            b: Float,
+            threshold: Float,
         ): Rect = coroutineScope {
             val left = mutableListOf<Deferred<Rect>>()
             val right = mutableListOf<Deferred<Rect>>()
@@ -850,15 +861,25 @@ fn find_bottom(@builtin(global_invocation_id) global_id: vec3<u32>) {
                 if (leftIdx < mipmap.textures.size) {
                     left.add(
                         dispatchTrimCompute(
-                            mipmap.textures[leftIdx], pipelineLeft, r, g, b, threshold
-                        )
+                            mipmap.textures[leftIdx],
+                            pipelineLeft,
+                            r,
+                            g,
+                            b,
+                            threshold,
+                        ),
                     )
                 }
                 if (rightIdx < mipmap.textures.size) {
                     right.add(
                         dispatchTrimCompute(
-                            mipmap.textures[rightIdx], pipelineRight, r, g, b, threshold
-                        )
+                            mipmap.textures[rightIdx],
+                            pipelineRight,
+                            r,
+                            g,
+                            b,
+                            threshold,
+                        ),
                     )
                 }
             }
@@ -870,15 +891,25 @@ fn find_bottom(@builtin(global_invocation_id) global_id: vec3<u32>) {
                 if (topIdx < mipmap.textures.size) {
                     top.add(
                         dispatchTrimCompute(
-                            mipmap.textures[topIdx], pipelineTop, r, g, b, threshold
-                        )
+                            mipmap.textures[topIdx],
+                            pipelineTop,
+                            r,
+                            g,
+                            b,
+                            threshold,
+                        ),
                     )
                 }
                 if (bottomIdx < mipmap.textures.size) {
                     bottom.add(
                         dispatchTrimCompute(
-                            mipmap.textures[bottomIdx], pipelineBottom, r, g, b, threshold
-                        )
+                            mipmap.textures[bottomIdx],
+                            pipelineBottom,
+                            r,
+                            g,
+                            b,
+                            threshold,
+                        ),
                     )
                 }
             }
@@ -900,9 +931,9 @@ fn find_bottom(@builtin(global_invocation_id) global_id: vec3<u32>) {
                     leftResults.minOfOrNull { it.left } ?: 0,
                     topResults.minOfOrNull { it.top } ?: 0,
                     (rightResults.maxOfOrNull { it.right } ?: mipmap.tilesize) +
-                            mipmap.tilesize * (mipmap.tilesCols - 1),
+                        mipmap.tilesize * (mipmap.tilesCols - 1),
                     (bottomResults.maxOfOrNull { it.bottom } ?: mipmap.tilesize) +
-                            mipmap.tilesize * (mipmap.tilesRows - 1),
+                        mipmap.tilesize * (mipmap.tilesRows - 1),
                 )
             } finally {
                 job.cancel()
@@ -923,23 +954,28 @@ fn find_bottom(@builtin(global_invocation_id) global_id: vec3<u32>) {
         private fun dispatchTrimCompute(
             texture: GPUTexture,
             pipeline: GPUComputePipeline,
-            r: Float, g: Float, b: Float, threshold: Float
+            r: Float,
+            g: Float,
+            b: Float,
+            threshold: Float,
         ): Deferred<Rect> {
             val uniformBuffer = device.createBuffer(
                 GPUBufferDescriptor(
-                    size = 16, usage = BufferUsage.Uniform or BufferUsage.CopyDst
-                )
+                    size = 16,
+                    usage = BufferUsage.Uniform or BufferUsage.CopyDst,
+                ),
             )
             val resultBuffer = device.createBuffer(
                 GPUBufferDescriptor(
                     size = 16,
-                    usage = BufferUsage.Storage or BufferUsage.CopySrc or BufferUsage.CopyDst
-                )
+                    usage = BufferUsage.Storage or BufferUsage.CopySrc or BufferUsage.CopyDst,
+                ),
             )
             val stagingBuffer = device.createBuffer(
                 GPUBufferDescriptor(
-                    size = 16, usage = BufferUsage.CopyDst or BufferUsage.MapRead
-                )
+                    size = 16,
+                    usage = BufferUsage.CopyDst or BufferUsage.MapRead,
+                ),
             )
 
             val byteBuffer = trimUniformByteBuffer.get()
@@ -965,19 +1001,22 @@ fn find_bottom(@builtin(global_invocation_id) global_id: vec3<u32>) {
             val pass = encoder.beginComputePass()
             pass.setPipeline(pipeline)
             pass.setTransientBindGroup(
-                0, device.createBindGroup(
+                0,
+                device.createBindGroup(
                     GPUBindGroupDescriptor(
-                        layout = pipeline.groupLayout(), entries = arrayOf(
+                        layout = pipeline.groupLayout(),
+                        entries = arrayOf(
                             GPUBindGroupEntry(0, textureView = targetView),
                             GPUBindGroupEntry(1, buffer = resultBuffer),
                             GPUBindGroupEntry(2, buffer = uniformBuffer),
-                        )
-                    )
-                )
+                        ),
+                    ),
+                ),
             )
 
             pass.dispatchWorkgroups(
-                ceil(texture.width / 8.0).toInt(), ceil(texture.height / 8.0).toInt()
+                ceil(texture.width / 8.0).toInt(),
+                ceil(texture.height / 8.0).toInt(),
             )
             pass.endAndRelease(targetView)
 
@@ -1022,7 +1061,8 @@ fn find_bottom(@builtin(global_invocation_id) global_id: vec3<u32>) {
                         resultBuffer.destroyAndRelease()
                         stagingBuffer.destroyAndRelease()
                     }
-                })
+                },
+            )
 
             return res
         }

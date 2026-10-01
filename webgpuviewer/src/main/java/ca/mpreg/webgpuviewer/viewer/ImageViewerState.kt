@@ -177,9 +177,11 @@ open class ImageViewerState(var isVertical: Boolean = false, var isReversed: Boo
             invalidate()
             try {
                 Animatable(direction.toFloat()).animateTo(
-                    0f, animationSpec = spring(
-                        stiffness = Spring.StiffnessMediumLow, visibilityThreshold = 0.002f
-                    )
+                    0f,
+                    animationSpec = spring(
+                        stiffness = Spring.StiffnessMediumLow,
+                        visibilityThreshold = 0.002f,
+                    ),
                 ) {
                     setPageOffsetDirect(value)
                     invalidate()
@@ -269,11 +271,12 @@ open class ImageViewerState(var isVertical: Boolean = false, var isReversed: Boo
         bubbleJob?.cancel()
         bubbleJob = scope?.launch {
             Animatable(target.progress).animateTo(
-                to, animationSpec = spring(
+                to,
+                animationSpec = spring(
                     dampingRatio = if (to > 0f) 0.78f else 1f,
                     stiffness = Spring.StiffnessMediumLow,
                     visibilityThreshold = 0.002f,
-                )
+                ),
             ) {
                 target.progress = value
                 invalidate()
@@ -320,7 +323,7 @@ open class ImageViewerState(var isVertical: Boolean = false, var isReversed: Boo
         // On [dispatcher] and drained under the lock, as [post] itself would have run them.
         scope.launch(dispatcher) {
             val pending = synchronized(this@ImageViewerState) {
-                _postInit.toList().also { _postInit.clear() }
+                pendingPostInit.toList().also { pendingPostInit.clear() }
             }
             pending.forEach { it() }
         }
@@ -395,9 +398,11 @@ open class ImageViewerState(var isVertical: Boolean = false, var isReversed: Boo
             // Captured here, drawn on the GPU thread below - see this function's doc.
             val snapshot = captureRenderState() ?: continue
             drawing = launch(dispatcher) {
-                when (renderer.render { encoder, texture ->
-                    renderSnapshot(encoder, texture, snapshot)
-                }) {
+                when (
+                    renderer.render { encoder, texture ->
+                        renderSnapshot(encoder, texture, snapshot)
+                    }
+                ) {
                     FrameResult.Drawn -> {
                         reportedUnavailable = false
                         retries = 0
@@ -473,7 +478,7 @@ open class ImageViewerState(var isVertical: Boolean = false, var isReversed: Boo
         encoder: GPUCommandEncoder,
         texture: GPUTexture,
         clearColor: Int = 0,
-        block: (GPURenderPassEncoder) -> Unit
+        block: (GPURenderPassEncoder) -> Unit,
     ) {
         val targetView = texture.createView()
         val pass = encoder.beginRenderPass(
@@ -488,8 +493,8 @@ open class ImageViewerState(var isVertical: Boolean = false, var isReversed: Boo
                             ((clearColor shr 8) and 0xFF) / 255.0,
                             (clearColor and 0xFF) / 255.0,
                             ((clearColor ushr 24) and 0xFF) / 255.0,
-                        )
-                    )
+                        ),
+                    ),
                 ),
                 // Fresh each frame: the tile blit marks what it covered so masked draws skip
                 // re-shading it. Discarded afterward - nothing reads it across frames.
@@ -498,8 +503,8 @@ open class ImageViewerState(var isVertical: Boolean = false, var isReversed: Boo
                     stencilLoadOp = LoadOp.Clear,
                     stencilStoreOp = StoreOp.Discard,
                     stencilClearValue = 0,
-                )
-            )
+                ),
+            ),
         )
         try {
             block(pass)
@@ -509,7 +514,9 @@ open class ImageViewerState(var isVertical: Boolean = false, var isReversed: Boo
     }
 
     protected open suspend fun renderSnapshot(
-        encoder: GPUCommandEncoder, texture: GPUTexture, snapshot: Any
+        encoder: GPUCommandEncoder,
+        texture: GPUTexture,
+        snapshot: Any,
     ) {
         if (snapshot === EmptySnapshot) {
             Draw.clear(encoder, texture, 0)
@@ -540,7 +547,7 @@ open class ImageViewerState(var isVertical: Boolean = false, var isReversed: Boo
         }
     }
 
-    private val _postInit = mutableListOf<(suspend () -> Unit)>()
+    private val pendingPostInit = mutableListOf<(suspend () -> Unit)>()
 
     @Synchronized
     fun post(fn: suspend () -> Unit) {
@@ -550,7 +557,7 @@ open class ImageViewerState(var isVertical: Boolean = false, var isReversed: Boo
                 fn()
             }
         } else {
-            _postInit.add(fn)
+            pendingPostInit.add(fn)
         }
     }
 

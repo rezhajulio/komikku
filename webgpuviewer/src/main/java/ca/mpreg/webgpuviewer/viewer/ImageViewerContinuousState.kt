@@ -376,8 +376,12 @@ class ImageViewerContinuousState : ImageViewerState(isVertical = true) {
         val docY = (anchorDocYInternal + scrollYInternal).toFloat()
         val page = getPage(0)
         val pageHeight = page?.let { getPageSlotHeight(it) } ?: 0f
-        val fraction = if (pageHeight > 0f) (scrollYInternal / pageHeight).toFloat()
-            .fastCoerceIn(0f, 1f) else 0f
+        val fraction = if (pageHeight > 0f) {
+            (scrollYInternal / pageHeight).toFloat()
+                .fastCoerceIn(0f, 1f)
+        } else {
+            0f
+        }
         ContinuousPosition(
             documentY = docY,
             scale = scale,
@@ -419,7 +423,7 @@ class ImageViewerContinuousState : ImageViewerState(isVertical = true) {
         if (pos.pageIndexHint >= 0) {
             documentYForPageIndexLocked(
                 pos.pageIndexHint,
-                pos.fractionWithinPage
+                pos.fractionWithinPage,
             )?.let { return it }
         }
         return pos.documentY.toDouble()
@@ -478,9 +482,12 @@ class ImageViewerContinuousState : ImageViewerState(isVertical = true) {
         animationJob = scope?.launch {
             try {
                 animate(
-                    direction * height / 2f, 0f, animationSpec = spring(
-                        stiffness = Spring.StiffnessMediumLow, visibilityThreshold = 0.5f
-                    )
+                    direction * height / 2f,
+                    0f,
+                    animationSpec = spring(
+                        stiffness = Spring.StiffnessMediumLow,
+                        visibilityThreshold = 0.5f,
+                    ),
                 ) { value, _ ->
                     slideOffset = value
                     invalidate()
@@ -503,9 +510,12 @@ class ImageViewerContinuousState : ImageViewerState(isVertical = true) {
             try {
                 var lastValue = 0f
                 animate(
-                    0f, deltaPixels, animationSpec = spring(
-                        stiffness = Spring.StiffnessMediumLow, visibilityThreshold = 0.002f
-                    )
+                    0f,
+                    deltaPixels,
+                    animationSpec = spring(
+                        stiffness = Spring.StiffnessMediumLow,
+                        visibilityThreshold = 0.002f,
+                    ),
                 ) { value, _ ->
                     scrollBy(value - lastValue)
                     lastValue = value
@@ -569,8 +579,10 @@ class ImageViewerContinuousState : ImageViewerState(isVertical = true) {
             if (pageHeight > 0f) currentPageHeight = pageHeight
             // A decode can shorten the document under a position already at its end.
             clampToDocumentEnd()
-            if (wasPinned) maxScrollY()?.let {
-                if (it >= 0.0 && scrollYInternal < it) scrollYInternal = it
+            if (wasPinned) {
+                maxScrollY()?.let {
+                    if (it >= 0.0 && scrollYInternal < it) scrollYInternal = it
+                }
             }
         }
 
@@ -674,13 +686,20 @@ class ImageViewerContinuousState : ImageViewerState(isVertical = true) {
         }
 
         ContinuousRenderSnapshot(
-            pages, scale, offsetX, cameraDocY, isScaleAnimating || isFlinging, backgroundColor,
-            scrolledThrough
+            pages,
+            scale,
+            offsetX,
+            cameraDocY,
+            isScaleAnimating || isFlinging,
+            backgroundColor,
+            scrolledThrough,
         )
     }
 
     override suspend fun renderSnapshot(
-        encoder: GPUCommandEncoder, texture: GPUTexture, snapshot: Any
+        encoder: GPUCommandEncoder,
+        texture: GPUTexture,
+        snapshot: Any,
     ) {
         val s = snapshot as ContinuousRenderSnapshot
         tiles.newFrame()
@@ -725,7 +744,7 @@ class ImageViewerContinuousState : ImageViewerState(isVertical = true) {
                         vp.contentHeight,
                         s.offsetX,
                         s.scale,
-                        s.suppressGeneration
+                        s.suppressGeneration,
                     )
                     if (!covered) {
                         page.forEachImage { image, srcOffsetX, sideScale ->
@@ -734,11 +753,16 @@ class ImageViewerContinuousState : ImageViewerState(isVertical = true) {
                             val docCenterX =
                                 pageScale * (srcOffsetX + sideScale * image.x)
                             val docCenterY = vp.docTop + 0.5f * vp.contentHeight +
-                                    pageScale * sideScale * image.y
+                                pageScale * sideScale * image.y
                             val targetX = anchorX + s.scale * docCenterX
                             val targetY = anchorY + s.scale * docCenterY
                             val (x, y) = solveImagePlacement(
-                                targetX, targetY, imageScale, image, dstW, dstH
+                                targetX,
+                                targetY,
+                                imageScale,
+                                image,
+                                dstW,
+                                dstH,
                             )
                             // Non-highQuality content skips linear light; an animated page
                             // swaps images every frame, so it takes the fast sampler too.
@@ -746,7 +770,13 @@ class ImageViewerContinuousState : ImageViewerState(isVertical = true) {
                                 RenderPage.renderFast(pass, image, texture, x, y, imageScale)
                             } else {
                                 RenderPage.renderFast(
-                                    pass, image, texture, x, y, imageScale, linear = false
+                                    pass,
+                                    image,
+                                    texture,
+                                    x,
+                                    y,
+                                    imageScale,
+                                    linear = false,
                                 )
                             }
                         }
@@ -762,7 +792,7 @@ class ImageViewerContinuousState : ImageViewerState(isVertical = true) {
                             (anchorX - s.scale * dstW / 2f) / dstW,
                             top / dstH,
                             (anchorX + s.scale * dstW / 2f) / dstW,
-                            (top + s.scale * vp.contentHeight) / dstH
+                            (top + s.scale * vp.contentHeight) / dstH,
                         )
                     }
                 }

@@ -110,11 +110,14 @@ class FilterChain {
                 // The swapchain is a render attachment of one fixed format - a compute filter, or
                 // one that resamples or wants headroom, has to land offscreen and be blitted.
                 val direct = last && !filter.usesCompute &&
-                        filter.outputFormat == surface.format &&
-                        outWidth == surface.width && outHeight == surface.height
+                    filter.outputFormat == surface.format &&
+                    outWidth == surface.width && outHeight == surface.height
 
-                val dstSlot = if (direct) null
-                else acquire(outWidth, outHeight, filter.outputFormat, filter.usesCompute)
+                val dstSlot = if (direct) {
+                    null
+                } else {
+                    acquire(outWidth, outHeight, filter.outputFormat, filter.usesCompute)
+                }
                 val dst = dstSlot?.view ?: surface.createView().also { surfaceViews.add(it) }
 
                 filter.run(this, encoder, src, width, height, dst, outWidth, outHeight)
@@ -126,16 +129,18 @@ class FilterChain {
                 width = outWidth
                 height = outHeight
 
-                if (last && !direct) tailBlit.run(
-                    this,
-                    encoder,
-                    src,
-                    width,
-                    height,
-                    surface.createView().also { surfaceViews.add(it) },
-                    surface.width,
-                    surface.height
-                )
+                if (last && !direct) {
+                    tailBlit.run(
+                        this,
+                        encoder,
+                        src,
+                        width,
+                        height,
+                        surface.createView().also { surfaceViews.add(it) },
+                        surface.width,
+                        surface.height,
+                    )
+                }
             }
         } finally {
             srcSlot?.let { it.inUse = false }
@@ -149,7 +154,10 @@ class FilterChain {
      * The caller must hand it back with [release] before returning from [Filter.run].
      */
     fun scratch(
-        width: Int, height: Int, format: Int = Hdr.frameFormat, storage: Boolean = false
+        width: Int,
+        height: Int,
+        format: Int = Hdr.frameFormat,
+        storage: Boolean = false,
     ): GPUTextureView = acquire(width, height, format, storage).view
 
     /** Return a [scratch] texture to the pool. */
@@ -197,7 +205,7 @@ class FilterChain {
     // Sizes are screen-scale and the format is a short enum, so one long holds the whole key.
     private fun key(width: Int, height: Int, format: Int, storage: Boolean): Long =
         (width.toLong() shl 44) or (height.toLong() shl 24) or
-                (format.toLong() shl 1) or (if (storage) 1L else 0L)
+            (format.toLong() shl 1) or (if (storage) 1L else 0L)
 
     private fun acquire(width: Int, height: Int, format: Int, storage: Boolean): Slot {
         val slots = pool.getOrPut(key(width, height, format, storage)) { ArrayList() }
@@ -224,8 +232,10 @@ class FilterChain {
 
         val texture = device.createTexture(
             GPUTextureDescriptor(
-                size = GPUExtent3D(width, height), format = format, usage = usage
-            )
+                size = GPUExtent3D(width, height),
+                format = format,
+                usage = usage,
+            ),
         )
         val slot = Slot(texture, texture.createView())
         slot.inUse = true
@@ -279,7 +289,7 @@ class FilterChain {
                 minFilter = FilterMode.Linear,
                 addressModeU = AddressMode.ClampToEdge,
                 addressModeV = AddressMode.ClampToEdge,
-            )
+            ),
         )
     }
 

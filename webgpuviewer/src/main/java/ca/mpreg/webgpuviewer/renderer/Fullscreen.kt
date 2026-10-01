@@ -63,34 +63,38 @@ fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
     fun buildPipeline(code: String, format: Int, label: String): GPURenderPipeline {
         val device = WebGpuRenderer.device
         val module = device.createShaderModule(
-            GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(VERTEX + code))
+            GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(VERTEX + code)),
         )
         return device.createRenderPipeline(
             GPURenderPipelineDescriptor(
                 label = label,
                 vertex = GPUVertexState(module, entryPoint = "vs_main"),
                 fragment = GPUFragmentState(
-                    module, entryPoint = "fs_main",
-                    targets = arrayOf(GPUColorTargetState(format = format))
+                    module,
+                    entryPoint = "fs_main",
+                    targets = arrayOf(GPUColorTargetState(format = format)),
                 ),
                 primitive = GPUPrimitiveState(topology = TriangleList),
-            )
+            ),
         )
     }
 
     /** A pass over the whole of [dst]. Clears, since the triangle covers every pixel anyway. */
     fun beginPass(
-        encoder: GPUCommandEncoder, dst: GPUTextureView, label: String
+        encoder: GPUCommandEncoder,
+        dst: GPUTextureView,
+        label: String,
     ): GPURenderPassEncoder = encoder.beginRenderPass(
         GPURenderPassDescriptor(
-            label = label, colorAttachments = arrayOf(
+            label = label,
+            colorAttachments = arrayOf(
                 GPURenderPassColorAttachment(
                     view = dst,
                     loadOp = LoadOp.Clear,
                     storeOp = StoreOp.Store,
-                    clearValue = GPUColor(0.0, 0.0, 0.0, 0.0)
-                )
-            )
-        )
+                    clearValue = GPUColor(0.0, 0.0, 0.0, 0.0),
+                ),
+            ),
+        ),
     )
 }
