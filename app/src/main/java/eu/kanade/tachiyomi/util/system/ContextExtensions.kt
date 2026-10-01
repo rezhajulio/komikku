@@ -27,6 +27,7 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import android.graphics.Color
 import java.io.File
 
 /**
@@ -97,6 +98,22 @@ fun Context.createFileInCacheDir(name: String): File {
     file.createNewFile()
     return file
 }
+
+/**
+ * Background color of the reader for the given [readerTheme] preference value.
+ *
+ * Automatic (3) resolves against the current night mode, matching the activity background.
+ */
+// KMK -->
+private val ReaderGrayBackgroundColor = Color.rgb(0x20, 0x21, 0x25)
+
+fun Context.readerBackgroundColor(readerTheme: Int): Int = when (readerTheme) {
+    0 -> Color.WHITE // White
+    2 -> ReaderGrayBackgroundColor // Gray
+    3 -> if (isNightMode()) ReaderGrayBackgroundColor else Color.WHITE // Automatic
+    else -> Color.BLACK // Black
+}
+// KMK <--
 
 /**
  * Creates night mode Context depending on reader theme/background

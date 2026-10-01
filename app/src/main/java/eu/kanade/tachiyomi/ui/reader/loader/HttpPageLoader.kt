@@ -218,14 +218,31 @@ internal class HttpPageLoader(
             val imageUrl = page.imageUrl!!
 
             if (!chapterCache.isImageInCache(imageUrl)) {
+                // KMK -->
+                val live = page.downloadStream
+                // KMK <--
                 page.status = Page.State.DownloadImage
-                val imageResponse = source.getImage(page, dataSaver)
-                chapterCache.putImageToCache(imageUrl, imageResponse)
+                // KMK -->
+                try {
+                    val imageResponse = source.getImage(page, dataSaver)
+                    chapterCache.putImageToCache(imageUrl, imageResponse, live)
+                    live?.finish()
+                } catch (e: Throwable) {
+                    live?.finish(e)
+                    throw e
+                }
+                // KMK <--
             }
 
+            // KMK -->
+            page.downloadStream = null
+            // KMK <--
             page.stream = { chapterCache.getImageFile(imageUrl).inputStream() }
             page.status = Page.State.Ready
         } catch (e: Throwable) {
+            // KMK -->
+            page.downloadStream = null
+            // KMK <--
             page.status = Page.State.Error(e)
             if (e is CancellationException) {
                 throw e

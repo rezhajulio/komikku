@@ -25,4 +25,9 @@ open class ReaderPage(
             field = value
             if (value) shiftedPage = false
         }
+
+    // KMK -->
+    /** Live download bytes for streaming decode while the image downloads. */
+    var downloadStream: DownloadStream? = null
+    // KMK <--
 }
