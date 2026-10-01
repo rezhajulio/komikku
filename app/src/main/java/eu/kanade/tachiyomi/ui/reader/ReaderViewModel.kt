@@ -488,6 +488,13 @@ class ReaderViewModel @JvmOverloads constructor(
                         page,
                         // SY <--
                     )
+
+                    // A series opened for the first time: ask how it reads, rather than leave it on
+                    // the default until someone digs through the settings.
+                    val readingMode = ReadingMode.fromPreference(manga.readingMode.toInt())
+                    if (readingMode == ReadingMode.DEFAULT && readerPreferences.askReadingMode().get()) {
+                        mutableState.update { it.copy(dialog = Dialog.FirstReadingMode) }
+                    }
                     Result.success(true)
                 } else {
                     // Unlikely but okay
@@ -1162,6 +1169,22 @@ class ReaderViewModel @JvmOverloads constructor(
         mutableState.update { it.copy(dialog = Dialog.ReadingModeSelect) }
     }
 
+    /**
+     * The answer to [Dialog.FirstReadingMode], saved for this series - the default too, so it
+     * isn't asked again. Through [setMangaReadingMode] either way: any change to the manga
+     * rebuilds the viewer, which then needs its chapters handed over again.
+     */
+    fun saveFirstReadingMode(readingMode: ReadingMode) {
+        closeDialog()
+        setMangaReadingMode(readingMode)
+    }
+
+    /** "Don't ask again" on [Dialog.FirstReadingMode]: this series stays on the default. */
+    fun stopAskingReadingMode() {
+        readerPreferences.askReadingMode().set(false)
+        closeDialog()
+    }
+
     fun openOrientationModeSelectDialog() {
         mutableState.update { it.copy(dialog = Dialog.OrientationModeSelect) }
     }
@@ -1509,6 +1532,7 @@ class ReaderViewModel @JvmOverloads constructor(
         data object Loading : Dialog
         data object Settings : Dialog
         data object ReadingModeSelect : Dialog
+        data object FirstReadingMode : Dialog
         data object OrientationModeSelect : Dialog
 
         // SY -->

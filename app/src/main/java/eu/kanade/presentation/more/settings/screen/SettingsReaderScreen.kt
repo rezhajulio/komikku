@@ -50,6 +50,11 @@ object SettingsReaderScreen : SearchableSettings {
                     .toImmutableMap(),
                 title = stringResource(MR.strings.pref_viewer_type),
             ),
+            Preference.PreferenceItem.SwitchPreference(
+                preference = readerPref.askReadingMode(),
+                title = stringResource(KMR.strings.pref_ask_reading_mode),
+                subtitle = stringResource(KMR.strings.pref_ask_reading_mode_summary),
+            ),
             Preference.PreferenceItem.ListPreference(
                 preference = readerPref.doubleTapAnimSpeed(),
                 entries = persistentMapOf(
@@ -337,6 +342,11 @@ object SettingsReaderScreen : SearchableSettings {
                     preference = readerPreferences.navigateToPan(),
                     title = stringResource(MR.strings.pref_navigate_pan),
                     enabled = navMode != 5,
+                ),
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = readerPreferences.bubbleZoom(),
+                    title = stringResource(KMR.strings.pref_bubble_zoom),
+                    subtitle = stringResource(KMR.strings.pref_bubble_zoom_summary),
                 ),
                 Preference.PreferenceItem.SwitchPreference(
                     preference = dualPageSplitPref,
