@@ -12,6 +12,7 @@ import javax.inject.Inject
 plugins {
     id("mihon.library")
     id("mihon.library.compose")
+    id("org.jetbrains.kotlin.android")
 }
 
 android {
