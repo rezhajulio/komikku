@@ -40,6 +40,20 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        // Pin the debug keystore to a committed one. Otherwise AGP generates a
+        // fresh random debug key per machine, so every CI-built dev APK has a
+        // different signature and can't be installed over the previous build
+        // ("signatures do not match"). This key is debug-only; release signing
+        // still uses the SIGNING_* secrets.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         val debug by getting {
             applicationIdSuffix = ".dev"
