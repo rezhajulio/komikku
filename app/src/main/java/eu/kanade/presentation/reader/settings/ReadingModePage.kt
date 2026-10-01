@@ -30,7 +30,7 @@ import uy.kohesive.injekt.api.get
 import java.text.NumberFormat
 
 @Composable
-internal fun ReadingModePage(screenModel: ReaderSettingsScreenModel) {
+internal fun ColumnScope.ReadingModePage(screenModel: ReaderSettingsScreenModel) {
     HeadingItem(MR.strings.pref_category_for_this_series)
     val manga by screenModel.mangaFlow.collectAsState()
 
