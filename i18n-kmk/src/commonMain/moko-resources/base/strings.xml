@@ -248,6 +248,8 @@
     <string name="pref_dual_page_view">Dual page view</string>
     <string name="pref_continuous_minwidth">Min width</string>
     <string name="pref_continuous_gap">Gap</string>
+    <string name="pref_bubble_zoom">Bubble zoom</string>
+    <string name="pref_bubble_zoom_summary">Double-tap a speech bubble to open it enlarged</string>
     <string name="transition_animation_basic">Basic</string>
     <string name="transition_animation_flip">Interactive page curl</string>
     <string name="transition_animation_flip_left">Page flip (left)</string>
@@ -268,4 +270,10 @@
     <string name="dual_page_view_never">Never</string>
     <string name="dual_page_view_always">Always</string>
     <string name="dual_page_view_wide">When wide</string>
+    <string name="dual_page_view_unfolded">When unfolded</string>
+    <string name="pref_ask_reading_mode">Ask for each new series</string>
+    <string name="pref_ask_reading_mode_summary">Pick the reading mode the first time you open a series</string>
+    <string name="first_reading_mode_title">How does this series read?</string>
+    <string name="first_reading_mode_summary">Saved for this series only. You can change it any time from the reader\'s menu.</string>
+    <string name="action_dont_ask_again">Don\'t ask again</string>
 </resources>

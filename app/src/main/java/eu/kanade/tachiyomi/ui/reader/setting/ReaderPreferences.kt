@@ -48,6 +48,9 @@ class ReaderPreferences(
         ReadingMode.RIGHT_TO_LEFT.flagValue,
     )
 
+    /** Ask for a reading mode the first time a series without one of its own is opened. */
+    fun askReadingMode() = preferenceStore.getBoolean("ask_reading_mode", true)
+
     fun defaultOrientationType() = preferenceStore.getInt(
         "pref_default_orientation_type_key",
         ReaderOrientation.FREE.flagValue,
@@ -220,9 +223,12 @@ class ReaderPreferences(
 
     fun cutoutMode() = preferenceStore.getEnum("webgpu_cutout_mode", CutoutMode.AVOID)
 
+    /** Double-tap a speech bubble to open it enlarged over the page. */
+    fun bubbleZoom() = preferenceStore.getBoolean("webgpu_bubble_zoom", true)
+
     fun cutoutModeDual() = preferenceStore.getEnum("webgpu_dual_cutout_mode", CutoutMode.IGNORE)
 
-    fun dualPageView() = preferenceStore.getEnum("pref_dual_page_view", DualPageView.ALWAYS)
+    fun dualPageView() = preferenceStore.getEnum("pref_dual_page_view", DualPageView.UNFOLDED)
 
     fun continuousMinWidth() = preferenceStore.getInt("webgpu_continuous_minwidth", 100)
 
@@ -298,6 +304,9 @@ class ReaderPreferences(
     enum class DualPageView(val titleRes: StringResource) {
         NEVER(KMR.strings.dual_page_view_never),
         ALWAYS(KMR.strings.dual_page_view_always),
+
+        /** On a screen at least tablet-wide: a foldable unfolded, not on its cover screen. */
+        UNFOLDED(KMR.strings.dual_page_view_unfolded),
         WIDE(KMR.strings.dual_page_view_wide),
     }
     // KMK <--

@@ -214,6 +214,11 @@ private fun ColumnScope.WebGpuViewerSettings(screenModel: ReaderSettingsScreenMo
             pref = screenModel.preferences.navigateToPan(),
         )
 
+        CheckboxItem(
+            label = stringResource(KMR.strings.pref_bubble_zoom),
+            pref = screenModel.preferences.bubbleZoom(),
+        )
+
         val transitionAnimation by screenModel.preferences.transitionAnimation().collectAsState()
         SettingsChipRow(KMR.strings.pref_transition_animation) {
             ReaderPreferences.TransitionAnimation.entries.forEach {
