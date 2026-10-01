@@ -32,6 +32,16 @@ dependencyResolutionManagement {
     }
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        // Vendored: JitPack can no longer build arkon/FlexibleAdapter@c8013533
+        // (its 2021-era buildscript requires nu.studer:java-ordered-properties:1.0.1,
+        // which no longer exists on Maven Central), so the AAR was rebuilt from the
+        // pinned sources and is vendored under maven-repo/.
+        exclusiveContent {
+            forRepository {
+                maven(url = uri("maven-repo"))
+            }
+            filter { includeGroup("com.github.arkon.FlexibleAdapter") }
+        }
         mavenCentral()
         google()
         maven(url = "https://www.jitpack.io")

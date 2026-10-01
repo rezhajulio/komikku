@@ -1,0 +1,81 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "com.github.arkon.FlexibleAdapter",
+    "module": "flexible-adapter",
+    "version": "c8013533",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.3.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "releaseVariantReleaseApiPublication",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "aar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "flexible-adapter-c8013533.aar",
+          "url": "flexible-adapter-c8013533.aar",
+          "size": 124533,
+          "sha512": "39057025aec2a85a73eced7c315e02ab6b137987cfec71c545610c4b0daddb4e2260224435b70dae0b2dec6eae3c24f16509d74ddf9e8409d7ee043a32472487",
+          "sha256": "f1014cc6157b5f7a0033094b646cacb547622911434395f88174d0bf4fe7ae47",
+          "sha1": "5553ca0b478282101bb9a5cb4f67ce50363499f5",
+          "md5": "eb7185a912a0fa5254ab5359284ef969"
+        }
+      ]
+    },
+    {
+      "name": "releaseVariantReleaseRuntimePublication",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "aar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "androidx.recyclerview",
+          "module": "recyclerview",
+          "version": {
+            "requires": "1.1.0"
+          }
+        },
+        {
+          "group": "androidx.annotation",
+          "module": "annotation",
+          "version": {
+            "requires": "1.1.0"
+          }
+        },
+        {
+          "group": "androidx.core",
+          "module": "core",
+          "version": {
+            "requires": "1.3.2"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "flexible-adapter-c8013533.aar",
+          "url": "flexible-adapter-c8013533.aar",
+          "size": 124533,
+          "sha512": "39057025aec2a85a73eced7c315e02ab6b137987cfec71c545610c4b0daddb4e2260224435b70dae0b2dec6eae3c24f16509d74ddf9e8409d7ee043a32472487",
+          "sha256": "f1014cc6157b5f7a0033094b646cacb547622911434395f88174d0bf4fe7ae47",
+          "sha1": "5553ca0b478282101bb9a5cb4f67ce50363499f5",
+          "md5": "eb7185a912a0fa5254ab5359284ef969"
+        }
+      ]
+    }
+  ]
+}
