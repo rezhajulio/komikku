@@ -138,15 +138,12 @@ fun ImageViewer(
                     scope.launch {
                         delay(viewConfiguration.longPressTimeoutMillis.milliseconds)
                         longPressed = true
-                        val offset = Offset(
-                            firstDown.position.x / state.width,
-                            firstDown.position.y / state.height,
+                        state.onLongTap?.invoke(
+                            Offset(
+                                firstDown.position.x / state.width,
+                                firstDown.position.y / state.height,
+                            ),
                         )
-                        // On a speech bubble, open it enlarged instead of the long-press
-                        // action - like double tap does. showBubble is false where there is
-                        // none, so the long-press action still fires everywhere else.
-                        if (state.showBubble(offset)) return@launch
-                        state.onLongTap?.invoke(offset)
                     }
                 } else {
                     null
