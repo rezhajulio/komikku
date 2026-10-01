@@ -62,11 +62,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -e
-          # Replace the previous rolling dev release, if any
+          # Replace the previous rolling dev release, if any.
+          # gh release delete removes the release but leaves the local tag
+          # behind, so delete it explicitly — otherwise gh release create
+          # fails with "tag dev exists locally but has not been pushed".
           gh release delete dev --yes >/dev/null 2>&1 || true
           git push origin :refs/tags/dev >/dev/null 2>&1 || true
+          git tag -d dev >/dev/null 2>&1 || true
           gh release create dev \
+            --target "${{ github.sha }}" \
             --prerelease \
             --title "Komikku Dev Build" \
-            --notes "Automated dev build from the dev branch (commit ${{ github.sha }}). Signed with the debug key - uninstall any release-signed Komikku before installing, Android rejects signature mismatches." \
+            --notes "Automated dev build from the dev branch (commit ${{ github.sha }}). Debug-signed as app.komikku.dev - installs alongside the release app, no need to uninstall." \
             app/build/outputs/apk/debug/Komikku-dev-*.apk
