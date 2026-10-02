@@ -13,6 +13,11 @@
 #
 # When the vendored AAR is intentionally replaced, update EXPECTED_SHA256 below
 # (use: sha256sum <file>  or  shasum -a 256 <file>).
+#
+# NOTE (2026-10-02): upstream moved FlexibleAdapter to Maven Central
+# (eu.davidea:flexible-adapter) and maven-repo/ was deleted. When nothing is
+# vendored, the guard passes as long as settings.gradle.kts does not reference
+# the removed maven-repo/.
 
 set -euo pipefail
 
@@ -20,12 +25,19 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
 AAR="maven-repo/com/github/arkon/FlexibleAdapter/flexible-adapter/c8013533/flexible-adapter-c8013533.aar"
-# Recorded when the AAR was vendored (PR #4). Update when the AAR is replaced.
-EXPECTED_SHA256="f1014cc6157b5f7a0033094b646cacb547622911434395f88174d0bf4fe7ae47"
 
 fail() { echo "FAIL: $1" >&2; exit 1; }
 
-[[ -f "$AAR" ]] || fail "$AAR is missing"
+if [[ ! -f "$AAR" ]]; then
+    # Nothing vendored: make sure we are not half-migrated (settings still
+    # pointing at the deleted maven-repo/).
+    grep -q 'maven-repo' settings.gradle.kts \
+        && fail "settings.gradle.kts still references maven-repo/, but the vendored AAR is gone"
+    echo "OK: no vendored AAR (FlexibleAdapter resolves from Maven Central)"
+    exit 0
+fi
+# Recorded when the AAR was vendored (PR #4). Update when the AAR is replaced.
+EXPECTED_SHA256="f1014cc6157b5f7a0033094b646cacb547622911434395f88174d0bf4fe7ae47"
 git ls-files --error-unmatch "$AAR" > /dev/null 2>&1 || fail "$AAR is not tracked by git"
 
 # Must be stored binary — text/line-ending conversion corrupts the ZIP.
