@@ -6,7 +6,6 @@
 
 # Gradle wrapper
 *.jar binary
-*.aar binary
 *.keystore binary
 
 # Images
