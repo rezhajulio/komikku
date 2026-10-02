@@ -118,6 +118,20 @@ Example: `DeepLinkScreen` + `DeepLinkScreenModel` in `app/src/main/java/eu/kanad
 
 ## Build & CI
 
+### Pre-push guards (fail fast before CI)
+
+Run before pushing a branch — catches breakage that previously only surfaced mid-CI:
+
+```bash
+./scripts/pre-push-checks.sh
+```
+
+| Guard | What it catches |
+|-------|-----------------|
+| `check-clean-checkout.sh` | Cache-masked dependency failures (e.g. the JitPack 404 for FlexibleAdapter): resolves `:app:dependencies` from a fresh worktree with a cold Gradle cache. Skips with a warning when no JVM/Android SDK is present. |
+| `check-vendored-aar.sh` | Vendored AAR integrity: exists, tracked, marked binary in `.gitattributes`, valid ZIP, SHA-256 matches, and still pinned to `maven-repo/` in `settings.gradle.kts`. Update `EXPECTED_SHA256` in the script when the AAR is intentionally replaced. |
+| `check-debug-signing.sh` | Pinned debug keystore: `app/debug.keystore` committed, stored binary, and referenced by the debug `signingConfig` (runs the `keytool` open test when a JDK is available). |
+
 Build types: `debug` (`.dev`), `release`, `releaseTest` (`.rt`), `foss` (`.foss`), `preview` (`.beta`, CI default), `benchmark`.
 
 Gradle `-P` flags (`buildSrc/.../BuildConfig.kt`):
