@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.data.coil
 
 import android.graphics.Bitmap
+import android.os.Build
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import ca.mpreg.imagedecoder.ImageDecoder
@@ -125,9 +126,28 @@ class ImageDecoder(private val resources: ImageSource, private val options: Opti
                 ImageUtil.ImageType.JP2,
                 -> true
 
+                // KMK -->
+                // Samsung's libhwui ships a proprietary format sniffer (kumiho::isSupportedFormat)
+                // with a stack buffer overflow: while sniffing certain images (e.g. carrying large
+                // XMP metadata) it smashes the native stack and the process dies with SIGILL (ARM
+                // pointer-authentication failure on return). It is reached through the platform
+                // decoder, so on Samsung devices decode every format with our own (Rust) decoder
+                // instead of falling through to the platform one.
+                ImageUtil.ImageType.JPEG,
+                ImageUtil.ImageType.PNG,
+                ImageUtil.ImageType.WEBP,
+                ImageUtil.ImageType.GIF,
+                -> isSamsungDevice
+                // KMK <--
+
                 else -> false
             }
         }
+
+        // KMK -->
+        private val isSamsungDevice: Boolean =
+            Build.MANUFACTURER.equals("samsung", ignoreCase = true)
+        // KMK <--
 
         override fun equals(other: Any?) = other is Factory
 
