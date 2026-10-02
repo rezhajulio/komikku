@@ -198,11 +198,13 @@ fun ImageViewer(
                                 zoomPage.animateTo(
                                     Offset(tapX, tapY),
                                     targetScale = zoomPage.doubleTapScale,
+                                    animationSpec = state.doubleTapZoomSpec(),
                                 )
                             } else {
                                 zoomPage.animateTo(
                                     Offset(tapX, tapY),
                                     targetScale = zoomPage.homeScale,
+                                    animationSpec = state.doubleTapZoomSpec(),
                                 )
                             }
                         }

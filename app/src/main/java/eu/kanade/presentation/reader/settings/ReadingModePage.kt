@@ -135,6 +135,14 @@ private fun ColumnScope.WebGpuViewerSettings(screenModel: ReaderSettingsScreenMo
             label = stringResource(MR.strings.pref_webtoon_disable_zoom_out),
             pref = screenModel.preferences.webtoonDisableZoomOut(),
         )
+        CheckboxItem(
+            label = stringResource(MR.strings.pref_double_tap_zoom),
+            pref = screenModel.preferences.webtoonDoubleTapZoomEnabled(),
+        )
+        CheckboxItem(
+            label = stringResource(MR.strings.pref_crop_borders),
+            pref = screenModel.preferences.cropBordersWebtoon(),
+        )
         return
     }
 
@@ -145,6 +153,11 @@ private fun ColumnScope.WebGpuViewerSettings(screenModel: ReaderSettingsScreenMo
         onSelect = screenModel.preferences.navigationModePager()::set,
         invertMode = pagerNavInverted,
         onSelectInvertMode = screenModel.preferences.pagerNavInverted()::set,
+    )
+
+    CheckboxItem(
+        label = stringResource(MR.strings.pref_double_tap_zoom),
+        pref = screenModel.preferences.pagedDoubleTapZoomEnabled(),
     )
 
     if (isDual) {

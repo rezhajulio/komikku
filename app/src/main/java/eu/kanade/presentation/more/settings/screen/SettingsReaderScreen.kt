@@ -5,6 +5,7 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalView
+import eu.kanade.domain.base.BasePreferences
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderBottomButton
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
@@ -16,6 +17,7 @@ import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerConfig
 import eu.kanade.tachiyomi.util.system.hasDisplayCutout
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -261,10 +263,12 @@ object SettingsReaderScreen : SearchableSettings {
         val pagedDisableZoomIn by pagedDisableZoomInPref.collectAsState()
         val landscapeZoom by landscapeZoomPref.collectAsState()
         // KMK <--
+        // The WebGPU reader can't split or rotate wide pages, and has scale types of its own.
+        val webGpu by remember { Injekt.get<BasePreferences>() }.highQualityRenderer().collectAsState()
 
         return Preference.PreferenceGroup(
             title = stringResource(MR.strings.pager_viewer),
-            preferenceItems = persistentListOf(
+            preferenceItems = listOfNotNull<Preference.PreferenceItem<out Any, out Any>>(
                 Preference.PreferenceItem.ListPreference(
                     preference = navModePref,
                     entries = ReaderPreferences.TapZones
@@ -289,10 +293,13 @@ object SettingsReaderScreen : SearchableSettings {
                 Preference.PreferenceItem.ListPreference(
                     preference = imageScaleTypePref,
                     entries = ReaderPreferences.ImageScaleType
-                        .mapIndexed { index, it -> index + 1 to stringResource(it) }
-                        .toMap()
+                        .mapIndexed { index, it -> index + 1 to it }
+                        .filter { (_, it) -> !webGpu || it in ReaderPreferences.ImageScaleTypeWebGpuViewer }
+                        .associate { (index, it) -> index to stringResource(it) }
                         .toImmutableMap(),
                     title = stringResource(MR.strings.pref_image_scale_type),
+                    // The current choice, as by default - and for WebGPU, that a spread always fits.
+                    subtitle = if (webGpu) "%s (" + stringResource(KMR.strings.pref_image_scale_type_single) + ")" else "%s",
                 ),
                 Preference.PreferenceItem.ListPreference(
                     preference = readerPreferences.zoomStart(),
@@ -348,6 +355,13 @@ object SettingsReaderScreen : SearchableSettings {
                     title = stringResource(KMR.strings.pref_bubble_zoom),
                     subtitle = stringResource(KMR.strings.pref_bubble_zoom_summary),
                 ),
+                Preference.PreferenceItem.ListPreference(
+                    preference = readerPreferences.dualPageView(),
+                    entries = ReaderPreferences.DualPageView.entries
+                        .associateWith { stringResource(it.titleRes) }
+                        .toImmutableMap(),
+                    title = stringResource(KMR.strings.pref_dual_page_view),
+                ).takeIf { webGpu },
                 Preference.PreferenceItem.SwitchPreference(
                     preference = dualPageSplitPref,
                     title = stringResource(MR.strings.pref_dual_page_split),
@@ -355,13 +369,13 @@ object SettingsReaderScreen : SearchableSettings {
                         rotateToFitPref.set(false)
                         true
                     },
-                ),
+                ).takeIf { !webGpu },
                 Preference.PreferenceItem.SwitchPreference(
                     preference = readerPreferences.dualPageInvertPaged(),
                     title = stringResource(MR.strings.pref_dual_page_invert),
                     subtitle = stringResource(MR.strings.pref_dual_page_invert_summary),
                     enabled = dualPageSplit,
-                ),
+                ).takeIf { !webGpu },
                 Preference.PreferenceItem.SwitchPreference(
                     preference = rotateToFitPref,
                     title = stringResource(MR.strings.pref_page_rotate),
@@ -369,13 +383,13 @@ object SettingsReaderScreen : SearchableSettings {
                         dualPageSplitPref.set(false)
                         true
                     },
-                ),
+                ).takeIf { !webGpu },
                 Preference.PreferenceItem.SwitchPreference(
                     preference = readerPreferences.dualPageRotateToFitInvert(),
                     title = stringResource(MR.strings.pref_page_rotate_invert),
                     enabled = rotateToFit,
-                ),
-            ),
+                ).takeIf { !webGpu },
+            ).toImmutableList(),
         )
     }
 
@@ -393,9 +407,13 @@ object SettingsReaderScreen : SearchableSettings {
         val rotateToFit by rotateToFitPref.collectAsState()
         val webtoonSidePadding by webtoonSidePaddingPref.collectAsState()
 
+        // What the WebGPU reader has no use for: it sets the page width itself, and doesn't hide
+        // the menu on scroll or split and rotate wide pages.
+        val webGpu by remember { Injekt.get<BasePreferences>() }.highQualityRenderer().collectAsState()
+
         return Preference.PreferenceGroup(
             title = stringResource(MR.strings.webtoon_viewer),
-            preferenceItems = persistentListOf(
+            preferenceItems = listOfNotNull<Preference.PreferenceItem<out Any, out Any>>(
                 Preference.PreferenceItem.ListPreference(
                     preference = navModePref,
                     entries = ReaderPreferences.TapZones
@@ -438,7 +456,7 @@ object SettingsReaderScreen : SearchableSettings {
                     title = stringResource(MR.strings.pref_webtoon_side_padding),
                     valueString = numberFormat.format(webtoonSidePadding / 100f),
                     onValueChanged = { webtoonSidePaddingPref.set(it) },
-                ),
+                ).takeIf { !webGpu },
                 Preference.PreferenceItem.ListPreference(
                     preference = readerPreferences.readerHideThreshold(),
                     entries = persistentMapOf(
@@ -448,7 +466,7 @@ object SettingsReaderScreen : SearchableSettings {
                         ReaderPreferences.ReaderHideThreshold.LOWEST to stringResource(MR.strings.pref_lowest),
                     ),
                     title = stringResource(MR.strings.pref_hide_threshold),
-                ),
+                ).takeIf { !webGpu },
                 Preference.PreferenceItem.SwitchPreference(
                     preference = readerPreferences.cropBordersWebtoon(),
                     title = stringResource(MR.strings.pref_crop_borders),
@@ -460,13 +478,13 @@ object SettingsReaderScreen : SearchableSettings {
                         rotateToFitPref.set(false)
                         true
                     },
-                ),
+                ).takeIf { !webGpu },
                 Preference.PreferenceItem.SwitchPreference(
                     preference = readerPreferences.dualPageInvertWebtoon(),
                     title = stringResource(MR.strings.pref_dual_page_invert),
                     subtitle = stringResource(MR.strings.pref_dual_page_invert_summary),
                     enabled = dualPageSplit,
-                ),
+                ).takeIf { !webGpu },
                 Preference.PreferenceItem.SwitchPreference(
                     preference = rotateToFitPref,
                     title = stringResource(MR.strings.pref_page_rotate),
@@ -474,12 +492,12 @@ object SettingsReaderScreen : SearchableSettings {
                         dualPageSplitPref.set(false)
                         true
                     },
-                ),
+                ).takeIf { !webGpu },
                 Preference.PreferenceItem.SwitchPreference(
                     preference = readerPreferences.dualPageRotateToFitInvertWebtoon(),
                     title = stringResource(MR.strings.pref_page_rotate_invert),
                     enabled = rotateToFit,
-                ),
+                ).takeIf { !webGpu },
                 Preference.PreferenceItem.SwitchPreference(
                     preference = readerPreferences.webtoonDoubleTapZoomEnabled(),
                     title = stringResource(MR.strings.pref_double_tap_zoom),
@@ -500,7 +518,7 @@ object SettingsReaderScreen : SearchableSettings {
                     title = stringResource(MR.strings.pref_page_transitions),
                 ),
                 // SY <--
-            ),
+            ).toImmutableList(),
         )
     }
 

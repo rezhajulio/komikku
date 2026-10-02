@@ -201,10 +201,7 @@ fun ImageViewerContinuous(
                                     animate(
                                         0f,
                                         1f,
-                                        animationSpec = spring(
-                                            stiffness = Spring.StiffnessMediumLow,
-                                            visibilityThreshold = 0.002f,
-                                        ),
+                                        animationSpec = state.doubleTapZoomSpec(),
                                     ) { t, _ ->
                                         val newScale =
                                             startScale + (state.homeScale - startScale) * t
@@ -230,10 +227,7 @@ fun ImageViewerContinuous(
                                     animate(
                                         0f,
                                         1f,
-                                        animationSpec = spring(
-                                            stiffness = Spring.StiffnessMediumLow,
-                                            visibilityThreshold = 0.002f,
-                                        ),
+                                        animationSpec = state.doubleTapZoomSpec(),
                                     ) { t, _ ->
                                         val newScale =
                                             startScale + (state.doubleTapScale - startScale) * t
