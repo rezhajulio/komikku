@@ -250,6 +250,7 @@
     <string name="pref_continuous_gap">Gap</string>
     <string name="pref_bubble_zoom">Bubble zoom</string>
     <string name="pref_bubble_zoom_summary">Double-tap a speech bubble to open it enlarged</string>
+    <string name="pref_image_scale_type_single">single page view; a two-page spread always fits the screen</string>
     <string name="transition_animation_basic">Basic</string>
     <string name="transition_animation_flip">Interactive page curl</string>
     <string name="transition_animation_flip_left">Page flip (left)</string>

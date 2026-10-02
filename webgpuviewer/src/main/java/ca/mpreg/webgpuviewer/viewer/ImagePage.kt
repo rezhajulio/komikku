@@ -3,6 +3,7 @@ package ca.mpreg.webgpuviewer.viewer
 import android.content.Context
 import android.os.SystemClock
 import android.util.Log
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
@@ -1791,6 +1792,8 @@ open class ImagePage {
         targetX: Float = homeX,
         targetY: Float = homeY,
         targetScale: Float = scale,
+        /** How it moves there - a spring unless the caller says otherwise. */
+        animationSpec: AnimationSpec<Float>? = null,
     ) {
         animationJob?.cancel()
 
@@ -1841,7 +1844,7 @@ open class ImagePage {
                 animate(
                     0f,
                     1f,
-                    animationSpec = spring(
+                    animationSpec = animationSpec ?: spring(
                         stiffness = Spring.StiffnessMediumLow,
                         visibilityThreshold = 0.002f,
                     ),
