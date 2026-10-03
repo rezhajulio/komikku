@@ -62,6 +62,32 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -e
+          NEW_SHA="${{ github.sha }}"
+          SHORT_SHA="$(git rev-parse --short "$NEW_SHA")"
+          COUNT="$(git rev-list --count "$NEW_SHA")"
+          BASE_VERSION="$(grep -m1 'versionName = ' app/build.gradle.kts | sed 's/.*"\(.*\)".*/\1/')"
+          VERSION="${BASE_VERSION}-${COUNT}-${SHORT_SHA}"
+
+          # Changelog: commits since the previous dev release.
+          PREV_SHA="$(gh release view dev --json targetCommitish --jq .targetCommitish 2>/dev/null || true)"
+          if [ -n "$PREV_SHA" ] && git merge-base --is-ancestor "$PREV_SHA" "$NEW_SHA" 2>/dev/null; then
+            CHANGELOG="$(git log --format='- %s (%h)' "${PREV_SHA}..${NEW_SHA}")"
+          else
+            CHANGELOG="$(git log --format='- %s (%h)' -20 "$NEW_SHA")"
+          fi
+          [ -z "$CHANGELOG" ] && CHANGELOG="- No changes since the previous build."
+
+          {
+            echo "Automated dev build from the dev branch."
+            echo
+            echo "Version: $VERSION"
+            echo "Commit: $NEW_SHA"
+            echo "Debug-signed as app.komikku.dev - installs alongside the release app, no need to uninstall."
+            echo
+            echo "Changes since the previous build:"
+            echo "$CHANGELOG"
+          } > /tmp/dev_release_notes.md
+
           # Replace the previous rolling dev release, if any.
           # gh release delete removes the release but leaves the local tag
           # behind, so delete it explicitly — otherwise gh release create
@@ -70,8 +96,8 @@ jobs:
           git push origin :refs/tags/dev >/dev/null 2>&1 || true
           git tag -d dev >/dev/null 2>&1 || true
           gh release create dev \
-            --target "${{ github.sha }}" \
+            --target "$NEW_SHA" \
             --prerelease \
-            --title "Komikku Dev Build" \
-            --notes "Automated dev build from the dev branch (commit ${{ github.sha }}). Debug-signed as app.komikku.dev - installs alongside the release app, no need to uninstall." \
+            --title "Komikku Dev Build $VERSION" \
+            --notes-file /tmp/dev_release_notes.md \
             app/build/outputs/apk/debug/Komikku-dev-*.apk

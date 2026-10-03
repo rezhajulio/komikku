@@ -57,7 +57,9 @@ android {
     buildTypes {
         val debug by getting {
             applicationIdSuffix = ".dev"
-            versionNameSuffix = "-${getCommitCount()}"
+            // Dev builds carry the commit count + short git SHA so each build is
+            // identifiable (e.g. in Settings > About and crash logs).
+            versionNameSuffix = "-${getCommitCount()}-${getGitSha()}"
             isPseudoLocalesEnabled = true
         }
         val release by getting {
