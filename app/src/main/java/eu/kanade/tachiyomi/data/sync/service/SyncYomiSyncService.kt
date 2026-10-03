@@ -25,6 +25,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.apache.http.HttpStatus
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
@@ -103,6 +104,13 @@ class SyncYomiSyncService(
             notifier.showSyncError(e.message)
             reportSyncEvent(SyncEventStatus.SYNC_ERROR, e.message)
             return null
+        } catch (e: OutOfMemoryError) {
+            // OutOfMemoryError is an Error, not an Exception, so without this it would
+            // escape the worker and leave the sync stuck on "running" with no error shown.
+            logcat(LogPriority.ERROR) { "Out of memory syncing: ${e.message}" }
+            notifier.showSyncError(context.stringResource(KMR.strings.sync_oom_error))
+            reportSyncEvent(SyncEventStatus.SYNC_ERROR, "OutOfMemoryError")
+            return null
         }
     }
 
@@ -180,11 +188,21 @@ class SyncYomiSyncService(
         }
         val headers = headersBuilder.build()
 
-        val byteArray = protoBuf.encodeToByteArray(Backup.serializer(), backup)
-        if (byteArray.isEmpty()) {
+        // Encode the metadata once and stream the manga list, so a large library is never
+        // held as a single contiguous ByteArray (which is prone to OutOfMemoryError).
+        val metaBytes = protoBuf.encodeToByteArray(
+            Backup.serializer(),
+            backup.copy(backupManga = emptyList()),
+        )
+        if (metaBytes.isEmpty() && backup.backupManga.isEmpty()) {
             throw IllegalStateException(context.stringResource(MR.strings.empty_backup_error))
         }
-        val body = byteArray.toRequestBody("application/octet-stream".toMediaType())
+        val body = BackupRequestBody(
+            protoBuf = protoBuf,
+            manga = backup.backupManga,
+            metaBytes = metaBytes,
+            contentType = "application/octet-stream".toMediaType(),
+        )
 
         val uploadRequest = PUT(
             url = uploadUrl,
