@@ -1,7 +1,6 @@
 package eu.kanade.tachiyomi.data.coil
 
 import android.graphics.Bitmap
-import android.os.Build
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import ca.mpreg.imagedecoder.ImageDecoder
@@ -15,6 +14,7 @@ import coil3.decode.Decoder
 import coil3.decode.ImageSource
 import coil3.fetch.SourceFetchResult
 import coil3.request.Options
+import eu.kanade.tachiyomi.util.SamsungImageDecoder
 import okio.BufferedSource
 import tachiyomi.core.common.util.system.ImageUtil
 
@@ -137,17 +137,12 @@ class ImageDecoder(private val resources: ImageSource, private val options: Opti
                 ImageUtil.ImageType.PNG,
                 ImageUtil.ImageType.WEBP,
                 ImageUtil.ImageType.GIF,
-                -> isSamsungDevice
+                -> SamsungImageDecoder.isSamsungDevice
                 // KMK <--
 
                 else -> false
             }
         }
-
-        // KMK -->
-        private val isSamsungDevice: Boolean =
-            Build.MANUFACTURER.equals("samsung", ignoreCase = true)
-        // KMK <--
 
         override fun equals(other: Any?) = other is Factory
 

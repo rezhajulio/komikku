@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.ui.reader
 
 import android.app.Application
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.annotation.ColorInt
@@ -45,6 +46,7 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerViewer
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.R2LPagerViewer
+import eu.kanade.tachiyomi.util.SamsungImageDecoder
 import eu.kanade.tachiyomi.util.chapter.filterDownloaded
 import eu.kanade.tachiyomi.util.chapter.removeDuplicates
 import eu.kanade.tachiyomi.util.editCover
@@ -104,6 +106,7 @@ import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import java.io.InputStream
 import java.time.Instant
 import java.util.Date
 
@@ -1301,8 +1304,12 @@ class ReaderViewModel @JvmOverloads constructor(
         ImageUtil.findImageType(stream1) ?: throw Exception("Not an image")
         val stream2 = page2.stream!!
         ImageUtil.findImageType(stream2) ?: throw Exception("Not an image")
-        val imageBitmap = BitmapFactory.decodeStream(stream1()) ?: throw Exception("Failed to decode image")
-        val imageBitmap2 = BitmapFactory.decodeStream(stream2()) ?: throw Exception("Failed to decode image")
+        // KMK -->
+        // On Samsung devices the platform decoder is bypassed (kumiho::isSupportedFormat
+        // stack overflow → native SIGILL); decode with the app's Rust decoder instead.
+        val imageBitmap = decodePageBitmap(stream1()) ?: throw Exception("Failed to decode image")
+        val imageBitmap2 = decodePageBitmap(stream2()) ?: throw Exception("Failed to decode image")
+        // KMK <--
 
         val chapter = page1.chapter.chapter
 
@@ -1322,6 +1329,16 @@ class ReaderViewModel @JvmOverloads constructor(
         )
     }
     // SY <--
+
+    // KMK -->
+    private fun decodePageBitmap(stream: InputStream): Bitmap? {
+        return if (SamsungImageDecoder.isSamsungDevice) {
+            SamsungImageDecoder.decodeToBitmap(stream)
+        } else {
+            BitmapFactory.decodeStream(stream)
+        }
+    }
+    // KMK <--
 
     /**
      * Shares the image of the selected page and notifies the UI with the path of the file to share.

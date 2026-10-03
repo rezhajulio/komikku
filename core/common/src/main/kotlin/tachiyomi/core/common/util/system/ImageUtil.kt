@@ -84,6 +84,14 @@ object ImageUtil {
 
     private fun getImageType(stream: InputStream): ImageType? {
         return try {
+            // KMK -->
+            // Samsung's libhwui format sniffer (kumiho::isSupportedFormat) has a stack
+            // buffer overflow that kills the process with SIGILL when sniffing certain
+            // images (e.g. carrying large XMP metadata) — even with inJustDecodeBounds.
+            // Detect the type from magic bytes instead of letting the platform decoder
+            // sniff the stream.
+            if (isSamsungDevice) return getImageTypeByMagicBytes(stream)
+            // KMK <--
             val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             if (stream.markSupported()) {
                 stream.mark(1024 * 1024)
@@ -98,6 +106,62 @@ object ImageUtil {
             null
         }
     }
+
+    // KMK -->
+    private val isSamsungDevice: Boolean =
+        Build.MANUFACTURER.equals("samsung", ignoreCase = true)
+
+    /**
+     * Detects the image type from magic bytes without involving the platform
+     * decoder at all. See [getImageType] for why this exists on Samsung devices.
+     */
+    private fun getImageTypeByMagicBytes(stream: InputStream): ImageType? {
+        if (stream.markSupported()) stream.mark(32)
+        return try {
+            val header = ByteArray(32)
+            var read = 0
+            while (read < header.size) {
+                val n = stream.read(header, read, header.size - read)
+                if (n < 0) break
+                read += n
+            }
+            if (read < 12) return null
+            when {
+                // JPEG: FF D8 FF
+                header[0] == 0xFF.toByte() && header[1] == 0xD8.toByte() -> ImageType.JPEG
+                // PNG: 89 50 4E 47 0D 0A 1A 0A
+                header[0] == 0x89.toByte() && header[1] == 0x50.toByte() &&
+                    header[2] == 0x4E.toByte() && header[3] == 0x47.toByte() -> ImageType.PNG
+                // GIF: GIF87a / GIF89a
+                header[0] == 0x47.toByte() && header[1] == 0x49.toByte() &&
+                    header[2] == 0x46.toByte() -> ImageType.GIF
+                // WebP: RIFF xxxx WEBP
+                header[0] == 0x52.toByte() && header[1] == 0x49.toByte() &&
+                    header[2] == 0x46.toByte() && header[3] == 0x46.toByte() &&
+                    header[8] == 0x57.toByte() && header[9] == 0x45.toByte() &&
+                    header[10] == 0x42.toByte() && header[11] == 0x50.toByte() -> ImageType.WEBP
+                // JPEG XL: FF 0A codestream, or JXL(space) container signature
+                (header[0] == 0xFF.toByte() && header[1] == 0x0A.toByte()) ||
+                    (
+                        header[4] == 0x4A.toByte() && header[5] == 0x58.toByte() &&
+                            header[6] == 0x4C.toByte() && header[7] == 0x20.toByte()
+                        ) -> ImageType.JXL
+                // JPEG 2000: 00 00 00 0C 6A 50 20 20
+                header[0] == 0x00.toByte() && header[1] == 0x00.toByte() &&
+                    header[4] == 0x6A.toByte() && header[5] == 0x50.toByte() -> ImageType.JP2
+                // HEIF/AVIF ISO BMFF: .... ftyp
+                header[4] == 0x66.toByte() && header[5] == 0x74.toByte() &&
+                    header[6] == 0x79.toByte() && header[7] == 0x70.toByte() -> {
+                    val brand = String(header, 8, 4, Charsets.US_ASCII)
+                    if (brand == "avif") ImageType.AVIF else ImageType.HEIF
+                }
+                else -> null
+            }
+        } finally {
+            if (stream.markSupported()) stream.reset()
+        }
+    }
+    // KMK <--
 
     enum class ImageType(val mime: String, val extension: String) {
         AVIF("image/avif", "avif"),
