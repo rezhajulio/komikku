@@ -99,7 +99,9 @@ fun getGithubRepo(peekIntoPreview: Boolean = false): String =
     if (isPreviewBuildType || peekIntoPreview) {
         "komikku-app/komikku-preview"
     } else {
-        "komikku-app/komikku"
+        // KMK -->
+        "rezhajulio/komikku"
+        // KMK <--
     }
 
 val RELEASE_TAG: String by lazy { getReleaseTag() }
