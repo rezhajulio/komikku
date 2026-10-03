@@ -57,8 +57,11 @@ class GetApplicationRelease(
 
     // KMK -->
     suspend fun awaitReleaseNotes(arguments: Arguments): Result {
+        // Our fork ships dev builds as prereleases; show their notes on dev builds,
+        // stable release notes otherwise.
+        val isDevBuild = "-" in arguments.versionName
         val releases = service.releaseNotes(arguments)
-            .filter { !it.preRelease }
+            .filter { isDevBuild || !it.preRelease }
 
         val latest = releases.getLatest() ?: return Result.NoNewUpdate
         return Result.NewUpdate(latest)

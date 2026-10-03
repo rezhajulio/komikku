@@ -150,4 +150,60 @@ class GetApplicationReleaseTest {
         coVerify(exactly = 0) { releaseService.releaseNotes(any()) }
         result shouldBe GetApplicationRelease.Result.NoNewUpdate
     }
+
+    // KMK -->
+    @Test
+    fun `When dev build expect prerelease notes`() = runTest {
+        val releases = listOf(
+            Release(
+                "dev-1.14.1-10641-90c97adce",
+                "info",
+                "http://example.com/release_link",
+                "http://example.com/release_link.apk",
+                preRelease = true,
+            ),
+        )
+
+        coEvery { releaseService.releaseNotes(any()) } returns releases
+
+        val result = getApplicationRelease.awaitReleaseNotes(
+            GetApplicationRelease.Arguments(
+                isFoss = false,
+                isPreview = false,
+                commitCount = 10641,
+                versionName = "1.14.1-10641-90c97adce",
+                repository = "test",
+            ),
+        )
+
+        result shouldBe GetApplicationRelease.Result.NewUpdate(releases.getLatest()!!)
+    }
+
+    @Test
+    fun `When stable build expect no prerelease notes`() = runTest {
+        val releases = listOf(
+            Release(
+                "dev-1.14.1-10641-90c97adce",
+                "info",
+                "http://example.com/release_link",
+                "http://example.com/release_link.apk",
+                preRelease = true,
+            ),
+        )
+
+        coEvery { releaseService.releaseNotes(any()) } returns releases
+
+        val result = getApplicationRelease.awaitReleaseNotes(
+            GetApplicationRelease.Arguments(
+                isFoss = false,
+                isPreview = false,
+                commitCount = 0,
+                versionName = "1.14.1",
+                repository = "test",
+            ),
+        )
+
+        result shouldBe GetApplicationRelease.Result.NoNewUpdate
+    }
+    // KMK <--
 }
