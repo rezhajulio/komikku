@@ -22,6 +22,8 @@ import eu.kanade.tachiyomi.util.system.workManager
 import kotlinx.coroutines.runBlocking
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.i18n.kmk.KMR
+import tachiyomi.presentation.core.i18n.stringResource
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.util.concurrent.TimeUnit
@@ -55,6 +57,12 @@ class SyncDataJob(private val context: Context, workerParams: WorkerParameters) 
         return try {
             SyncManager(context).syncData()
             Result.success()
+        } catch (e: OutOfMemoryError) {
+            // Backup creation/merge happens before doSync, so an OOM there never reaches
+            // SyncYomiSyncService's handler. Report instead of crashing silently.
+            logcat(LogPriority.ERROR) { "Out of memory syncing: ${e.message}" }
+            notifier.showSyncError(context.stringResource(KMR.strings.sync_oom_error))
+            Result.success() // try again next time
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e)
             notifier.showSyncError(e.message)
