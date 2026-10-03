@@ -26,6 +26,7 @@ import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.source.online.MetadataSource
 import eu.kanade.tachiyomi.source.online.NamespaceSource
 import eu.kanade.tachiyomi.source.online.UrlImportableSource
+import eu.kanade.tachiyomi.util.SamsungImageDecoder
 import eu.kanade.tachiyomi.util.asJsoup
 import exh.debug.DebugToggles
 import exh.eh.EHTags
@@ -1382,8 +1383,15 @@ class EHentai(
                 if (response.isSuccessful) {
                     val body = ByteArrayOutputStream()
                         .use {
-                            val bitmap = BitmapFactory.decodeStream(response.body.byteStream())
-                                ?: throw IOException("Null bitmap($thumbnailPreview)")
+                            // KMK -->
+                            // On Samsung devices the platform decoder is bypassed
+                            // (kumiho::isSupportedFormat stack overflow → native SIGILL).
+                            val bitmap = if (SamsungImageDecoder.isSamsungDevice) {
+                                SamsungImageDecoder.decodeToBitmap(response.body.byteStream())
+                            } else {
+                                BitmapFactory.decodeStream(response.body.byteStream())
+                            } ?: throw IOException("Null bitmap($thumbnailPreview)")
+                            // KMK <--
                             Bitmap.createBitmap(
                                 bitmap,
                                 thumbnailPreview.widthOffset,

@@ -2,13 +2,12 @@ package eu.kanade.tachiyomi.data.coil
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.os.Build
-import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import androidx.palette.graphics.Palette
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.coil.MangaCoverMetadata.setRatioAndColors
 import eu.kanade.tachiyomi.ui.manga.MangaScreenModel
+import eu.kanade.tachiyomi.util.SamsungImageDecoder
 import okio.BufferedSource
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.MangaCover
@@ -168,46 +167,33 @@ object MangaCoverMetadata {
     private const val SUB_SAMPLE = 4
 
     // KMK -->
-    private val isSamsungDevice: Boolean =
-        Build.MANUFACTURER.equals("samsung", ignoreCase = true)
-
     /**
-     * Decodes a cover bitmap downsampled by [SUB_SAMPLE], mirroring the
-     * [BitmapFactory.Options.inSampleSize] behavior of the platform path.
-     *
-     * On Samsung devices the platform decoder is bypassed: its libhwui format
-     * sniffer (kumiho::isSupportedFormat) has a stack buffer overflow that kills
-     * the process with SIGILL when sniffing certain images (e.g. carrying large
-     * XMP metadata). The app's own (Rust) image decoder is used instead.
+     * Decodes a cover bitmap. On Samsung devices the platform decoder is bypassed
+     * (kumiho::isSupportedFormat stack overflow -> native SIGILL), so the image is
+     * decoded full-resolution with [SamsungImageDecoder] and downsampled by
+     * [SUB_SAMPLE] here, mirroring the [BitmapFactory.Options.inSampleSize]
+     * behavior of the platform path (including [options] outWidth/outHeight).
      */
     private fun decodeBitmap(input: InputStream, options: BitmapFactory.Options): Bitmap? {
-        if (!isSamsungDevice) return BitmapFactory.decodeStream(input, null, options)
-        return try {
-            ca.mpreg.imagedecoder.ImageDecoder.open(input).use { dec ->
-                val frame = dec.decodeNext()
-                try {
-                    val config = if (dec.isHdr) Bitmap.Config.RGBA_F16 else Bitmap.Config.ARGB_8888
-                    val full = createBitmap(frame.width, frame.height, config)
-                    frame.image.rewind()
-                    full.copyPixelsFromBuffer(frame.image)
-                    val width = (frame.width / SUB_SAMPLE).coerceAtLeast(1)
-                    val height = (frame.height / SUB_SAMPLE).coerceAtLeast(1)
-                    options.outWidth = width
-                    options.outHeight = height
-                    if (width == frame.width && height == frame.height) {
-                        full
-                    } else {
-                        val scaled = full.scale(width, height)
-                        full.recycle()
-                        scaled
-                    }
-                } finally {
-                    frame.close()
+        if (SamsungImageDecoder.isSamsungDevice) {
+            val full = SamsungImageDecoder.decodeToBitmap(input) ?: return null
+            return try {
+                val width = (full.width / SUB_SAMPLE).coerceAtLeast(1)
+                val height = (full.height / SUB_SAMPLE).coerceAtLeast(1)
+                options.outWidth = width
+                options.outHeight = height
+                if (width == full.width && height == full.height) {
+                    full
+                } else {
+                    val scaled = full.scale(width, height)
+                    full.recycle()
+                    scaled
                 }
+            } catch (e: Exception) {
+                null
             }
-        } catch (e: Exception) {
-            null
         }
+        return BitmapFactory.decodeStream(input, null, options)
     }
 
     private fun decodeBitmap(file: File, options: BitmapFactory.Options): Bitmap? {
