@@ -1,6 +1,6 @@
 name: Dev Build
 # Build a dev APK on every push to the dev branch and publish it
-# to a rolling "dev" prerelease.
+# as a versioned "dev-*" prerelease. Older dev releases are kept.
 
 on:
   push:
@@ -9,6 +9,8 @@ on:
     paths:
       - '**'
       - '!**.md'
+      # CI/workflow changes alone should not generate an APK.
+      - '!.github/**'
   workflow_dispatch:
 
 concurrency:
@@ -68,8 +70,14 @@ jobs:
           BASE_VERSION="$(grep -m1 'versionName = ' app/build.gradle.kts | sed 's/.*"\(.*\)".*/\1/')"
           VERSION="${BASE_VERSION}-${COUNT}-${SHORT_SHA}"
 
-          # Changelog: commits since the previous dev release.
-          PREV_SHA="$(gh release view dev --json targetCommitish --jq .targetCommitish 2>/dev/null || true)"
+          # Changelog: commits since the most recent previous dev release
+          # (the legacy rolling `dev` tag or any earlier `dev-*` tag).
+          PREV_TAG="$(gh release list --limit 100 --json tagName,publishedAt \
+            --jq '[.[] | select(.tagName == "dev" or (.tagName | startswith("dev-")))] | sort_by(.publishedAt) | last | .tagName' 2>/dev/null || true)"
+          PREV_SHA=""
+          if [ -n "$PREV_TAG" ]; then
+            PREV_SHA="$(gh release view "$PREV_TAG" --json targetCommitish --jq .targetCommitish 2>/dev/null || true)"
+          fi
           if [ -n "$PREV_SHA" ] && git merge-base --is-ancestor "$PREV_SHA" "$NEW_SHA" 2>/dev/null; then
             CHANGELOG="$(git log --format='- %s (%h)' "${PREV_SHA}..${NEW_SHA}")"
           else
@@ -88,14 +96,17 @@ jobs:
             echo "$CHANGELOG"
           } > /tmp/dev_release_notes.md
 
-          # Replace the previous rolling dev release, if any.
+          # One release per build, tagged dev-<version>; older dev releases
+          # are kept. Only a release for this exact version is replaced
+          # (e.g. when rebuilding the same commit).
           # gh release delete removes the release but leaves the local tag
           # behind, so delete it explicitly — otherwise gh release create
-          # fails with "tag dev exists locally but has not been pushed".
-          gh release delete dev --yes >/dev/null 2>&1 || true
-          git push origin :refs/tags/dev >/dev/null 2>&1 || true
-          git tag -d dev >/dev/null 2>&1 || true
-          gh release create dev \
+          # fails with "tag exists locally but has not been pushed".
+          TAG="dev-${VERSION}"
+          gh release delete "$TAG" --yes >/dev/null 2>&1 || true
+          git push origin ":refs/tags/${TAG}" >/dev/null 2>&1 || true
+          git tag -d "$TAG" >/dev/null 2>&1 || true
+          gh release create "$TAG" \
             --target "$NEW_SHA" \
             --prerelease \
             --title "Komikku Dev Build $VERSION" \
