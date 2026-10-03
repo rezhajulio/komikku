@@ -277,4 +277,15 @@
     <string name="first_reading_mode_title">How does this series read?</string>
     <string name="first_reading_mode_summary">Saved for this series only. You can change it any time from the reader\'s menu.</string>
     <string name="action_dont_ask_again">Don\'t ask again</string>
+
+    <!-- Local comics guide (empty library) -->
+    <string name="local_guide_intro">Got comics or manga on your phone? Here is how to read them, in three steps.</string>
+    <string name="local_guide_step_storage">Pick a storage folder for Komikku, if you haven\'t yet. It gets a folder called \"local\" inside it.</string>
+    <string name="local_guide_step_series">In \"local\", make a folder for each series, named after it.</string>
+    <string name="local_guide_step_files">Put the chapters or volumes in that folder. Then open Local source and add the series to your library.</string>
+    <string name="local_guide_tree_storage">Your storage folder</string>
+    <string name="local_guide_formats">Works with CBZ, ZIP, CBR, RAR, EPUB, and folders of images. A cover.jpg in the series folder becomes its cover.</string>
+    <string name="local_guide_open_local">Open Local source</string>
+    <string name="local_guide_storage_settings">Storage folder</string>
+    <string name="local_guide_sources">Reading from online sources instead? Add an extension repository in Settings → Browse.</string>
 </resources>
