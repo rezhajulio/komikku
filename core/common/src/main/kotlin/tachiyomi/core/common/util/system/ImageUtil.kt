@@ -142,8 +142,10 @@ object ImageUtil {
                     header[10] == 0x42.toByte() && header[11] == 0x50.toByte() -> ImageType.WEBP
                 // JPEG XL: FF 0A codestream, or JXL(space) container signature
                 (header[0] == 0xFF.toByte() && header[1] == 0x0A.toByte()) ||
-                    (header[4] == 0x4A.toByte() && header[5] == 0x58.toByte() &&
-                        header[6] == 0x4C.toByte() && header[7] == 0x20.toByte()) -> ImageType.JXL
+                    (
+                        header[4] == 0x4A.toByte() && header[5] == 0x58.toByte() &&
+                            header[6] == 0x4C.toByte() && header[7] == 0x20.toByte()
+                    ) -> ImageType.JXL
                 // JPEG 2000: 00 00 00 0C 6A 50 20 20
                 header[0] == 0x00.toByte() && header[1] == 0x00.toByte() &&
                     header[4] == 0x6A.toByte() && header[5] == 0x50.toByte() -> ImageType.JP2
