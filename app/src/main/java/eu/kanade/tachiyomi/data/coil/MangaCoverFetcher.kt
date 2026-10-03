@@ -188,13 +188,17 @@ class MangaCoverFetcher(
                 }
 
                 // KMK -->
-                setRatioAndColorsInScope(
-                    mangaCover,
-                    bufferedSource = ImageSource(
-                        source = responseBody.source(),
-                        fileSystem = FileSystem.SYSTEM,
-                    ).source(),
-                )
+                // Peek up to MAX_COVER_PEEK_BYTES into an independent copy so metadata
+                // extraction never shares the live response stream with Coil. Skip when
+                // Content-Length is known to exceed the cap to avoid needlessly
+                // buffering a large image in memory (a truncated peek would not decode).
+                val bodyLength = responseBody.contentLength()
+                if (bodyLength < 0 || bodyLength <= MAX_COVER_PEEK_BYTES) {
+                    setRatioAndColorsInScope(
+                        mangaCover,
+                        bufferedSource = response.peekBody(MAX_COVER_PEEK_BYTES).source(),
+                    )
+                }
                 // KMK <--
                 // Read from response if cache is unused or unusable
                 return SourceFetchResult(
@@ -420,5 +424,10 @@ class MangaCoverFetcher(
         private val CACHE_CONTROL_NO_NETWORK_NO_CACHE = CacheControl.Builder().noCache().onlyIfCached().build()
 
         private const val HTTP_NOT_MODIFIED = 304
+
+        // KMK -->
+        /** Maximum bytes to peek from the network response for cover metadata extraction. */
+        private const val MAX_COVER_PEEK_BYTES = 5L * 1024 * 1024 // 5 MiB
+        // KMK <--
     }
 }
