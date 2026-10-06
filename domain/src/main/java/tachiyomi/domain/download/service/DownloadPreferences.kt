@@ -47,6 +47,14 @@ class DownloadPreferences(
 
     // KMK -->
     fun downloadCacheRenewInterval() = preferenceStore.getInt("download_cache_renew_interval", 1)
+
+    fun compressDownloadedChapters() = preferenceStore.getBoolean("compress_downloaded_chapters", false)
+
+    fun downloadCompressionFormat() = preferenceStore.getString("download_compression_format", "WEBP")
+
+    fun downloadCompressionQuality() = preferenceStore.getInt("download_compression_quality", 80)
+
+    fun autoGrayscaleBWManga() = preferenceStore.getBoolean("auto_grayscale_bw_manga", true)
     // KMK <--
 
     companion object {

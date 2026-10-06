@@ -67,6 +67,7 @@ import eu.kanade.tachiyomi.util.system.GLUtil
 import eu.kanade.tachiyomi.util.system.WebViewUtil
 import eu.kanade.tachiyomi.util.system.animatorDurationScale
 import eu.kanade.tachiyomi.util.system.cancelNotification
+import eu.kanade.tachiyomi.util.SamsungImageDecoder
 import eu.kanade.tachiyomi.util.system.isDebugBuildType
 import eu.kanade.tachiyomi.util.system.isPreviewBuildType
 import eu.kanade.tachiyomi.util.system.notify
@@ -89,6 +90,7 @@ import org.conscrypt.Conscrypt
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
+import tachiyomi.core.common.util.system.ImageCompressor
 import tachiyomi.core.common.util.system.ImageUtil
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.storage.service.StorageManager
@@ -121,6 +123,12 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
         // KMK -->
         if (isDebugBuildType) Timber.plant(Timber.DebugTree())
+
+        // Route image-decode calls in the download compressor around Samsung's
+        // broken platform decoder (native SIGILL crash); see SamsungImageDecoder.
+        if (SamsungImageDecoder.isSamsungDevice) {
+            ImageCompressor.decoderOverride = SamsungImageDecoder::decodeToBitmap
+        }
         // KMK <--
 
         GlobalExceptionHandler.initialize(applicationContext, CrashActivity::class.java)
