@@ -39,4 +39,5 @@ class BasePreferences(
     // KMK -->
     fun highQualityRenderer() = preferenceStore.getBoolean("pref_high_quality_renderer_key", true)
     // KMK <--
+    fun installationId() = preferenceStore.getString(Preference.appStateKey("installation_id"), "")
 }
