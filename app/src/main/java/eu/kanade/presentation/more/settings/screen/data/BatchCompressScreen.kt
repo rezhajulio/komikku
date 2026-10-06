@@ -695,7 +695,6 @@ class BatchCompressScreen : Screen() {
             else -> stringResource(KMR.strings.pref_download_compression_quality_desc_50)
         }
     }
-
 }
 
 private data class ChapterSelectionSummary(
