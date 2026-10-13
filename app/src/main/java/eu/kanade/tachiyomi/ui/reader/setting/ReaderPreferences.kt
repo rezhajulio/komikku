@@ -226,6 +226,10 @@ class ReaderPreferences(
     /** Double-tap a speech bubble to open it enlarged over the page. */
     fun bubbleZoom() = preferenceStore.getBoolean("webgpu_bubble_zoom", true)
 
+    /** Which gesture opens a bubble. */
+    fun bubbleZoomGesture() =
+        preferenceStore.getEnum("webgpu_bubble_zoom_gesture", BubbleZoomGesture.DOUBLE_TAP)
+
     fun cutoutModeDual() = preferenceStore.getEnum("webgpu_dual_cutout_mode", CutoutMode.IGNORE)
 
     fun dualPageView() = preferenceStore.getEnum("pref_dual_page_view", DualPageView.UNFOLDED)
@@ -308,6 +312,13 @@ class ReaderPreferences(
         /** On a screen at least tablet-wide: a foldable unfolded, not on its cover screen. */
         UNFOLDED(KMR.strings.dual_page_view_unfolded),
         WIDE(KMR.strings.dual_page_view_wide),
+    }
+
+    enum class BubbleZoomGesture(val titleRes: StringResource) {
+        DOUBLE_TAP(KMR.strings.bubble_zoom_gesture_double_tap),
+
+        /** A long press that finds no bubble opens the page's menu, as it always has. */
+        LONG_PRESS(KMR.strings.bubble_zoom_gesture_long_press),
     }
     // KMK <--
 
