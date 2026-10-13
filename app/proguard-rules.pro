@@ -283,7 +283,9 @@
  -keepattributes Signature
  -keep,allowoptimization class kotlin.coroutines.Continuation
  -keep,allowoptimization class * extends uy.kohesive.injekt.api.TypeReference
+ # KMK --> kept: fork still uses the requery-pinned SQLite driver (16KB ELF alignment, PR #4)
  -keep,allowoptimization public class io.requery.android.database.sqlite.SQLiteConnection { *; }
+ # KMK <--
 
  # Keep apache http client
  -keep class org.apache.http.** { *; }

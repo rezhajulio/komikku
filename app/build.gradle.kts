@@ -235,6 +235,7 @@ dependencies {
     implementation(androidx.paging.compose)
 
     implementation(libs.bundles.sqlite)
+
     // SY -->
     implementation(sylibs.sqlcipher)
     // SY <--
