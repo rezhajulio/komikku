@@ -21,6 +21,7 @@ import tachiyomi.data.MemoColumnAdapter
 import tachiyomi.data.StringListColumnAdapter
 import tachiyomi.data.UpdateStrategyColumnAdapter
 import tachiyomi.data.chapter.ChapterMapper
+import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
 import tachiyomi.domain.manga.model.CustomMangaInfo
 import tachiyomi.domain.manga.repository.CustomMangaRepository
@@ -90,6 +91,69 @@ class MangaChapterStatsTest {
         statsRowCount() shouldBe 3
         hasMissing() shouldBe false
         assertAggregatesMatch()
+    }
+
+    @Test
+    fun `merged entry aggregates use its own scanlator exclusions`() {
+        seedLibrary(count = 3)
+        val (child1, child2, parent) = db.mangasQueries.getAll(MangaMapper::mapManga)
+            .executeAsList().map { it.id }
+
+        insertChapterNumbered(child1, number = 1.0, scanlator = "alpha", read = true)
+        insertChapterNumbered(child1, number = 2.0, scanlator = null, read = false)
+        insertChapterNumbered(child2, number = 1.0, scanlator = "beta", read = true)
+        insertChapterNumbered(child2, number = 3.0, scanlator = null, read = false)
+
+        // Excluding a scanlator on the merged entry filters its children's chapters...
+        db.excluded_scanlatorsQueries.insert(parent, "alpha")
+        libraryRow(parent).totalChapters shouldBe 3
+        libraryRow(parent).readCount shouldBe 1
+
+        // ...but an exclusion configured on a child no longer leaks into the aggregate.
+        db.excluded_scanlatorsQueries.insert(child2, "beta")
+        libraryRow(parent).totalChapters shouldBe 3
+        // Each child's own row still honors its own exclusions.
+        libraryRow(child1).totalChapters shouldBe 2
+        libraryRow(child2).totalChapters shouldBe 1
+    }
+
+    @Test
+    fun `merged entry aggregates dedupe chapters per sort mode`() {
+        seedLibrary(count = 3)
+        val (child1, child2, parent) = db.mangasQueries.getAll(MangaMapper::mapManga)
+            .executeAsList().map { it.id }
+
+        insertChapterNumbered(child1, number = 1.0, scanlator = "alpha", read = true)
+        insertChapterNumbered(child1, number = 2.0, scanlator = null, read = false)
+        insertChapterNumbered(child2, number = 1.0, scanlator = "beta", read = true)
+        insertChapterNumbered(child2, number = 3.0, scanlator = null, read = false)
+
+        val selfRowId = db.mergedQueries.selectByMergeId(parent).executeAsList()
+            .first { it.manga_source == MERGED_SOURCE_ID }._id
+        fun setSortMode(mode: Long) {
+            db.mergedQueries.updateSettingsById(
+                getChapterUpdates = null,
+                downloadChapters = null,
+                infoManga = null,
+                chapterPriority = null,
+                chapterSortMode = mode,
+                id = selfRowId,
+            )
+        }
+
+        // Mode 1: duplicate chapter numbers keep the lower-priority source (child1).
+        setSortMode(1)
+        libraryRow(parent).totalChapters shouldBe 3
+        libraryRow(parent).readCount shouldBe 1
+
+        // Mode 2: keep only the source with the most chapters (tie -> lower manga id).
+        setSortMode(2)
+        libraryRow(parent).totalChapters shouldBe 2
+
+        // Mode 3: keep only the source with the highest chapter number.
+        setSortMode(3)
+        libraryRow(parent).totalChapters shouldBe 2
+        libraryRow(parent).readCount shouldBe 1
     }
 
     @Test
@@ -193,7 +257,7 @@ class MangaChapterStatsTest {
 
     private fun assertAggregatesMatch() {
         db.libraryViewQueries.library(MangaMapper::mapLibraryManga).executeAsList().forEach { row ->
-            val expected = recompute(sourceMangaIdsFor(row.id))
+            val expected = recompute(row.id)
             withClue(row.id) {
                 row.totalChapters shouldBe expected.total
                 row.readCount shouldBe expected.read
@@ -206,12 +270,6 @@ class MangaChapterStatsTest {
         }
     }
 
-    /** A merged entry aggregates child chapters. */
-    private fun sourceMangaIdsFor(mangaId: Long): List<Long> {
-        val children = db.mergedQueries.selectByMergeId(mangaId).executeAsList().mapNotNull { it.manga_id }
-        return children.ifEmpty { listOf(mangaId) }
-    }
-
     private data class Aggregate(
         val total: Long = 0,
         val read: Long = 0,
@@ -222,32 +280,86 @@ class MangaChapterStatsTest {
         val lastRead: Long = 0,
     )
 
-    private fun recompute(mangaIds: List<Long>): Aggregate {
-        var agg = Aggregate()
-        mangaIds.forEach { mangaId ->
-            val excluded = db.excluded_scanlatorsQueries.getExcludedScanlatorsByMangaId(mangaId)
-                .executeAsList()
-                .filterNotNull()
-                .toSet()
-            val history = db.historyQueries.getHistoryByMangaId(mangaId) { _, chapterId, lastRead, _ ->
+    private data class MemberChapter(val mangaId: Long, val chapter: Chapter, val priority: Long)
+
+    /**
+     * Mirrors the library query: plain entries aggregate their own chapters filtered by their own
+     * excluded scanlators; merged entries aggregate the union of their children's chapters (plus
+     * their own, via the self row) filtered by the *merged entry's* excluded scanlators and
+     * deduped the way the merged entry displays them.
+     */
+    private fun recompute(mangaId: Long): Aggregate {
+        val mergeRows = db.mergedQueries.selectByMergeId(mangaId).executeAsList()
+        val selfRow = mergeRows.firstOrNull { it.manga_source == MERGED_SOURCE_ID }
+        if (selfRow == null) {
+            return aggregateChapters(listOf(mangaId to 0L), exclusionsOf(mangaId), sortMode = 0L)
+        }
+        val members = mergeRows
+            .map { (it.manga_id ?: mangaId) to it.chapter_priority }
+            .distinct()
+        return aggregateChapters(members, exclusionsOf(mangaId), selfRow.chapter_sort_mode)
+    }
+
+    private fun exclusionsOf(mangaId: Long): Set<String> =
+        db.excluded_scanlatorsQueries.getExcludedScanlatorsByMangaId(mangaId)
+            .executeAsList()
+            .filterNotNull()
+            .toSet()
+
+    private fun aggregateChapters(
+        members: List<Pair<Long, Long>>,
+        excluded: Set<String>,
+        sortMode: Long,
+    ): Aggregate {
+        val historyByManga = members.map { it.first }.distinct().associateWith { mangaId ->
+            db.historyQueries.getHistoryByMangaId(mangaId) { _, chapterId, lastRead, _ ->
                 chapterId to (lastRead?.time ?: 0L)
             }.executeAsList().toMap()
-
+        }
+        val chapters = members.flatMap { (mangaId, priority) ->
             db.chaptersQueries
                 .getChaptersByMangaId(mangaId, 0L, 0L, 0L, ChapterMapper::mapChapter)
                 .executeAsList()
                 .filter { it.scanlator !in excluded }
-                .forEach { chapter ->
-                    agg = agg.copy(
-                        total = agg.total + 1,
-                        read = agg.read + if (chapter.read) 1 else 0,
-                        bookmark = agg.bookmark + if (chapter.bookmark) 1 else 0,
-                        bookmarkRead = agg.bookmarkRead + if (chapter.bookmark && chapter.read) 1 else 0,
-                        latestUpload = maxOf(agg.latestUpload, chapter.dateUpload),
-                        fetchedAt = maxOf(agg.fetchedAt, chapter.dateFetch),
-                        lastRead = maxOf(agg.lastRead, history[chapter.id] ?: 0L),
-                    )
+                .map { MemberChapter(mangaId, it, priority) }
+        }
+        val deduped = when (sortMode) {
+            // Prefer the lower-priority source on duplicate chapter numbers.
+            1L -> chapters.filter { c ->
+                c.chapter.chapterNumber < 0 || chapters.none { d ->
+                    d.mangaId != c.mangaId &&
+                        d.chapter.chapterNumber == c.chapter.chapterNumber &&
+                        (d.priority < c.priority || (d.priority == c.priority && d.mangaId < c.mangaId))
                 }
+            }
+            // Keep only the source with the most chapters.
+            2L -> {
+                val winner = chapters.groupBy { it.mangaId }
+                    .maxWithOrNull(compareBy({ it.value.size }, { -it.key }))
+                    ?.key
+                chapters.filter { it.mangaId == winner }
+            }
+            // Keep only the source with the highest chapter number.
+            3L -> {
+                val winner = chapters
+                    .maxWithOrNull(compareBy({ it.chapter.chapterNumber }, { -it.mangaId }))
+                    ?.mangaId
+                chapters.filter { it.mangaId == winner }
+            }
+            else -> chapters
+        }
+        var agg = Aggregate()
+        deduped.forEach { (mangaId, chapter) ->
+            val lastRead = historyByManga.getValue(mangaId)[chapter.id] ?: 0L
+            agg = agg.copy(
+                total = agg.total + 1,
+                read = agg.read + if (chapter.read) 1 else 0,
+                bookmark = agg.bookmark + if (chapter.bookmark) 1 else 0,
+                bookmarkRead = agg.bookmarkRead + if (chapter.bookmark && chapter.read) 1 else 0,
+                latestUpload = maxOf(agg.latestUpload, chapter.dateUpload),
+                fetchedAt = maxOf(agg.fetchedAt, chapter.dateFetch),
+                lastRead = maxOf(agg.lastRead, lastRead),
+            )
         }
         return agg
     }
@@ -356,6 +468,19 @@ class MangaChapterStatsTest {
                     mangaSource = 1,
                 )
             }
+            // The merged entry's own settings row, as SmartSearchMerge writes it in production.
+            db.mergedQueries.insert(
+                infoManga = false,
+                getChapterUpdates = false,
+                chapterSortMode = 0,
+                chapterPriority = -1,
+                downloadChapters = false,
+                mergeId = mergeId,
+                mergeUrl = "/merge",
+                mangaId = mergeId,
+                mangaUrl = "/merge",
+                mangaSource = MERGED_SOURCE_ID,
+            )
         }
     }
 
@@ -408,6 +533,29 @@ class MangaChapterStatsTest {
             sourceOrder = 0,
             dateFetch = dates ?: rng.nextLong(1, 5_000),
             dateUpload = dates ?: rng.nextLong(1, 5_000),
+            version = 0,
+            memo = JsonObject(emptyMap()),
+        )
+    }
+
+    private fun insertChapterNumbered(
+        mangaId: Long,
+        number: Double,
+        scanlator: String?,
+        read: Boolean,
+    ) {
+        db.chaptersQueries.insert(
+            mangaId = mangaId,
+            url = "/chapter/$mangaId/$number",
+            name = "Chapter $number",
+            scanlator = scanlator,
+            read = read,
+            bookmark = false,
+            lastPageRead = 0,
+            chapterNumber = number,
+            sourceOrder = 0,
+            dateFetch = 1000,
+            dateUpload = 2000,
             version = 0,
             memo = JsonObject(emptyMap()),
         )
