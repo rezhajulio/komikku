@@ -103,6 +103,7 @@ import eu.kanade.tachiyomi.ui.reader.viewer.ReaderProgressIndicator
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerConfig
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerViewer
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.VerticalPagerViewer
+import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuViewer
 import eu.kanade.tachiyomi.ui.reader.viewer.webtoon.WebtoonViewer
 import eu.kanade.tachiyomi.ui.webview.WebViewActivity
 import eu.kanade.tachiyomi.util.system.isNightMode
@@ -732,6 +733,15 @@ class ReaderActivity : BaseActivity() {
                 menuToggleToast = toast(if (enabled) MR.strings.on else MR.strings.off)
             },
             onClickSettings = viewModel::openSettingsDialog,
+            // KMK -->
+            onClickShiftSpread = (state.viewer as? WebGpuViewer)?.takeIf { it.isDualPageMode() }?.let { viewer ->
+                {
+                    val shifted = viewer.toggleSpreadShift()
+                    menuToggleToast?.cancel()
+                    menuToggleToast = toast(if (shifted) KMR.strings.spread_shifted else KMR.strings.spread_unshifted)
+                }
+            },
+            // KMK <--
             // SY -->
             isExhToolsVisible = state.ehUtilsVisible,
             onSetExhUtilsVisibility = viewModel::showEhUtils,

@@ -22,6 +22,7 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import kotlinx.collections.immutable.ImmutableSet
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.stringResource
 
@@ -48,6 +49,8 @@ fun ReaderBottomBar(
     onClickPageLayout: () -> Unit,
     onClickShiftPage: () -> Unit,
     // SY <--
+    /** Null where there is no spread to shift - a single page, or a webtoon. */
+    onClickShiftSpread: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     // KMK -->
@@ -172,6 +175,18 @@ fun ReaderBottomBar(
                 Icon(
                     painter = painterResource(R.drawable.ic_page_next_outline_24dp),
                     contentDescription = stringResource(SYMR.strings.shift_double_pages),
+                    // KMK -->
+                    tint = iconColor,
+                    // KMK <--
+                )
+            }
+        }
+
+        if (onClickShiftSpread != null) {
+            IconButton(onClick = onClickShiftSpread) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_shift_spread_24dp),
+                    contentDescription = stringResource(KMR.strings.action_shift_spread),
                     // KMK -->
                     tint = iconColor,
                     // KMK <--

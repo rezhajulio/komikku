@@ -99,6 +99,8 @@ fun ReaderAppBars(
     onClickPageLayout: () -> Unit,
     onClickShiftPage: () -> Unit,
     // SY <--
+    /** Null where there is no spread to shift - a single page, or a webtoon. */
+    onClickShiftSpread: (() -> Unit)? = null,
 ) {
     val isRtl = viewer is R2LPagerViewer
     val backgroundColor = MaterialTheme.colorScheme
@@ -275,6 +277,7 @@ fun ReaderAppBars(
                     onClickPageLayout = onClickPageLayout,
                     onClickShiftPage = onClickShiftPage,
                     // SY <--
+                    onClickShiftSpread = onClickShiftSpread,
                 )
             }
         }
