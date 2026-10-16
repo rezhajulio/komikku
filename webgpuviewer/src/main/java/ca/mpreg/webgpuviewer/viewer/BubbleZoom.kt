@@ -128,6 +128,19 @@ internal class BubbleOverlay(
     var sourceView: GPUTextureView? = null
     var sourceScale: Float = 1f
 
+    /** A copy ready to be shown again - a released overlay can't be, so a sequence hands out these. */
+    fun fresh(): BubbleOverlay = BubbleOverlay(
+        page,
+        mask,
+        maskWidth,
+        maskHeight,
+        rect,
+        targetX,
+        targetY,
+        zoom,
+        screenPerImagePixel,
+    )
+
     /** On the render thread. */
     fun release() {
         released = true
@@ -205,29 +218,16 @@ internal object BubbleZoom {
         tapX: Float,
         tapY: Float,
     ): BubbleOverlay? {
-        var hit: Pair<Image, FloatArray>? = null
-        var openEdge = NO_EDGE
-        page.forEachImage { image, offsetX, imageScale ->
-            if (hit != null) return@forEachImage
-            // As ImageSingle.forEachPlacedImage, at the page's own transform.
-            val placeX = (page.x + offsetX / screenWidth + WebGpuRenderer.offsetX) / imageScale -
-                WebGpuRenderer.offsetX
-            val placeY = (page.y + WebGpuRenderer.offsetY) / imageScale - WebGpuRenderer.offsetY
-            val rect = image.placement(
-                screenWidth,
-                screenHeight,
-                placeX,
-                placeY,
-                page.scale * imageScale,
-            )
-            if (tapX >= rect[0] && tapX < rect[2] && tapY >= rect[1] && tapY < rect[3]) {
-                hit = image to rect
-                // In a spread, a bubble cut by the seam is still a bubble: the side's inner edge
-                // bounds it instead of disqualifying it.
-                if (page is ImagePage.ImageSpread) openEdge = if (offsetX < 0f) RIGHT_EDGE else LEFT_EDGE
-            }
+        val hit = imageAt(page, screenWidth, screenHeight, tapX, tapY) ?: return null
+        val image = hit.image
+        val imageRect = hit.rect
+        // In a spread, a bubble cut by the seam is still a bubble: the side's inner edge bounds
+        // it instead of disqualifying it.
+        val openEdge = when {
+            page !is ImagePage.ImageSpread -> NO_EDGE
+            hit.offsetX < 0f -> RIGHT_EDGE
+            else -> LEFT_EDGE
         }
-        val (image, imageRect) = hit ?: return null
         val map = image.inkMap ?: return null
 
         val u = (tapX - imageRect[0]) / (imageRect[2] - imageRect[0])
@@ -239,7 +239,89 @@ internal object BubbleZoom {
             openEdge,
         ) ?: return null
 
-        // Map pixels to screen.
+        return overlay(page, screenWidth, screenHeight, image, map, imageRect, found)
+    }
+
+    /**
+     * Every bubble on [page], in reading order: right to left where [rightToLeft], else left to
+     * right, page by page in a spread, panel by panel within a page - see [PanelZoom.panelOrder]
+     * - and top to bottom within a panel. For stepping from one bubble to the next.
+     */
+    fun detectAll(
+        page: ImagePage.ImageSingle,
+        screenWidth: Int,
+        screenHeight: Int,
+        rightToLeft: Boolean,
+    ): List<BubbleOverlay> {
+        class Placed(
+            val overlay: BubbleOverlay,
+            val panel: Int,
+            val top: Int,
+            val bottom: Int,
+            val centerX: Int,
+        )
+
+        val pages = ArrayList<List<Placed>>()
+        page.forEachImage { image, offsetX, imageScale ->
+            val map = image.inkMap ?: return@forEachImage
+            val placeX = (page.x + offsetX / screenWidth + WebGpuRenderer.offsetX) / imageScale -
+                WebGpuRenderer.offsetX
+            val placeY = (page.y + WebGpuRenderer.offsetY) / imageScale - WebGpuRenderer.offsetY
+            val imageRect = image.placement(
+                screenWidth,
+                screenHeight,
+                placeX,
+                placeY,
+                page.scale * imageScale,
+            )
+            val openEdge = when {
+                page !is ImagePage.ImageSpread -> NO_EDGE
+                offsetX < 0f -> RIGHT_EDGE
+                else -> LEFT_EDGE
+            }
+            val panels = PanelZoom.panelOrder(map, rightToLeft)
+            val placed = ArrayList<Placed>()
+            for (found in findAll(map, openEdge)) {
+                val overlay = overlay(page, screenWidth, screenHeight, image, map, imageRect, found) ?: continue
+                val cx = found.x0 + found.width / 2
+                val cy = found.y0 + found.height / 2
+                val panel = panels.indexOfFirst { cx >= it[0] && cx < it[2] && cy >= it[1] && cy < it[3] }
+                placed += Placed(overlay, if (panel < 0) panels.size else panel, found.y0, found.y0 + found.height, cx)
+            }
+            // Within a panel: rows top to bottom, each row in reading direction. Two bubbles
+            // share a row when their vertical spans overlap by most of the shorter one.
+            placed.sortBy { it.top }
+            val rows = ArrayList<MutableList<Placed>>()
+            for (p in placed) {
+                val row = rows.lastOrNull()
+                val last = row?.lastOrNull()
+                if (row != null && last != null &&
+                    p.top < last.bottom - 0.4f * min(last.bottom - last.top, p.bottom - p.top)
+                ) {
+                    row += p
+                } else {
+                    rows += mutableListOf(p)
+                }
+            }
+            for (row in rows) if (rightToLeft) row.sortByDescending { it.centerX } else row.sortBy { it.centerX }
+            // A stable sort by panel keeps the row order within each panel.
+            pages += rows.flatten().sortedBy { it.panel }
+        }
+        // forEachImage walks a spread left side first; a right-to-left book reads the right side first.
+        if (rightToLeft) pages.reverse()
+        return pages.flatten().map { it.overlay }
+    }
+
+    /** As [detect]'s tail: the bubble [found] on [image], placed at [imageRect], as an overlay. */
+    private fun overlay(
+        page: ImagePage.ImageSingle,
+        screenWidth: Int,
+        screenHeight: Int,
+        image: Image,
+        map: InkMap,
+        imageRect: FloatArray,
+        found: Found,
+    ): BubbleOverlay? {
         val sx = (imageRect[2] - imageRect[0]) / map.width
         val sy = (imageRect[3] - imageRect[1]) / map.height
         val rect = floatArrayOf(
@@ -275,6 +357,102 @@ internal object BubbleZoom {
 
     /** A bubble found on an [InkMap]: its bounds there, and its shape within them. */
     class Found(val x0: Int, val y0: Int, val width: Int, val height: Int, val mask: ByteArray)
+
+    /**
+     * Every bubble on [map]: each patch of paper that doesn't reach the page's edge is tried as
+     * [find]'s seed, from its brightest pixel, so the same tests decide what is a bubble.
+     */
+    fun findAll(map: InkMap, openEdge: Int = NO_EDGE): List<Found> {
+        val w = map.width
+        val h = map.height
+        val luma = map.luma
+        val paper = (MIN_SEED_LUMA * PAPER_FRACTION).toInt()
+        val seen = BooleanArray(w * h)
+        val queue = IntArray(w * h)
+        val maxArea = (MAX_AREA * w * h).toInt()
+        val out = ArrayList<Found>()
+        for (start in 0 until w * h) {
+            if (seen[start] || (luma[start].toInt() and 0xFF) < paper) continue
+            // One patch of paper, four-connected.
+            var head = 0
+            var tail = 0
+            seen[start] = true
+            queue[tail++] = start
+            var brightest = start
+            var edge = false
+            var x0 = w
+            var x1 = -1
+            var y0 = h
+            var y1 = -1
+            while (head < tail) {
+                val i = queue[head++]
+                val px = i % w
+                val py = i / w
+                if (px < x0) x0 = px
+                if (px > x1) x1 = px
+                if (py < y0) y0 = py
+                if (py > y1) y1 = py
+                if (py == 0 || py == h - 1 || (px == 0 && openEdge != LEFT_EDGE) || (px == w - 1 && openEdge != RIGHT_EDGE)) edge = true
+                if ((luma[i].toInt() and 0xFF) > (luma[brightest].toInt() and 0xFF)) brightest = i
+                for (n in intArrayOf(
+                    if (px > 0) i - 1 else -1,
+                    if (px < w - 1) i + 1 else -1,
+                    if (py > 0) i - w else -1,
+                    if (py < h - 1) i + w else -1,
+                )) {
+                    if (n < 0 || seen[n] || (luma[n].toInt() and 0xFF) < paper) continue
+                    seen[n] = true
+                    queue[tail++] = n
+                }
+            }
+            if (edge || tail > maxArea || tail < 200) continue
+            if (x1 - x0 + 1 < 0.03f * w || y1 - y0 + 1 < 0.02f * h) continue
+            val found = find(map, brightest % w, brightest / w, openEdge) ?: continue
+            // The same bubble can surface twice where the adaptive threshold splits a patch.
+            val duplicate = out.any { other ->
+                val ix = max(0, min(found.x0 + found.width, other.x0 + other.width) - max(found.x0, other.x0))
+                val iy = max(0, min(found.y0 + found.height, other.y0 + other.height) - max(found.y0, other.y0))
+                ix * iy > 0.5f * min(found.width * found.height, other.width * other.height)
+            }
+            if (!duplicate) out += found
+        }
+        return out
+    }
+
+    /** One of [page]'s images and where it sits on screen - see [imageAt]. */
+    class Hit(val image: Image, val rect: FloatArray, val offsetX: Float)
+
+    /**
+     * The image of [page] under the tap at ([tapX], [tapY]), normalised screen coordinates on a
+     * [screenWidth] x [screenHeight] surface, with its placement there; null off every image.
+     */
+    fun imageAt(
+        page: ImagePage.ImageSingle,
+        screenWidth: Int,
+        screenHeight: Int,
+        tapX: Float,
+        tapY: Float,
+    ): Hit? {
+        var hit: Hit? = null
+        page.forEachImage { image, offsetX, imageScale ->
+            if (hit != null) return@forEachImage
+            // As ImageSingle.forEachPlacedImage, at the page's own transform.
+            val placeX = (page.x + offsetX / screenWidth + WebGpuRenderer.offsetX) / imageScale -
+                WebGpuRenderer.offsetX
+            val placeY = (page.y + WebGpuRenderer.offsetY) / imageScale - WebGpuRenderer.offsetY
+            val rect = image.placement(
+                screenWidth,
+                screenHeight,
+                placeX,
+                placeY,
+                page.scale * imageScale,
+            )
+            if (tapX >= rect[0] && tapX < rect[2] && tapY >= rect[1] && tapY < rect[3]) {
+                hit = Hit(image, rect, offsetX)
+            }
+        }
+        return hit
+    }
 
     /** Which side of the map, if any, a bubble may run off - the seam side of a spread's page. */
     private const val NO_EDGE = 0

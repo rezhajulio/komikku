@@ -230,6 +230,9 @@ class ReaderPreferences(
     fun bubbleZoomGesture() =
         preferenceStore.getEnum("webgpu_bubble_zoom_gesture", BubbleZoomGesture.DOUBLE_TAP)
 
+    /** The bubble gesture on artwork zooms to the panel under it rather than in by a step. */
+    fun panelZoom() = preferenceStore.getBoolean("webgpu_panel_zoom", false)
+
     fun cutoutModeDual() = preferenceStore.getEnum("webgpu_dual_cutout_mode", CutoutMode.IGNORE)
 
     fun dualPageView() = preferenceStore.getEnum("pref_dual_page_view", DualPageView.UNFOLDED)
@@ -341,6 +344,7 @@ class ReaderPreferences(
             MR.strings.edge_nav,
             MR.strings.right_and_left_nav,
             MR.strings.disabled_nav,
+            KMR.strings.bottom_menu_nav,
         )
 
         val ImageScaleType = listOf(

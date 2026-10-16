@@ -362,6 +362,11 @@ object SettingsReaderScreen : SearchableSettings {
                     title = stringResource(KMR.strings.pref_bubble_zoom_gesture),
                     enabled = bubbleZoom,
                 ).takeIf { webGpu },
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = readerPreferences.panelZoom(),
+                    title = stringResource(KMR.strings.pref_panel_zoom),
+                    subtitle = stringResource(KMR.strings.pref_panel_zoom_summary),
+                ).takeIf { webGpu },
                 Preference.PreferenceItem.ListPreference(
                     preference = readerPreferences.dualPageView(),
                     entries = ReaderPreferences.DualPageView.entries

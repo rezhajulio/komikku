@@ -7,6 +7,7 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences.LandscapeZoomScal
 import eu.kanade.tachiyomi.ui.reader.viewer.ReaderPageImageView
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerConfig
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation
+import eu.kanade.tachiyomi.ui.reader.viewer.navigation.BottomMenuNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.navigation.DisabledNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.navigation.EdgeNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.navigation.KindlishNavigation
@@ -244,6 +245,7 @@ class PagerConfig(
             3 -> EdgeNavigation()
             4 -> RightAndLeftNavigation()
             5 -> DisabledNavigation()
+            6 -> BottomMenuNavigation()
             else -> defaultNavigation()
         }
         navigationModeChangedListener?.invoke()

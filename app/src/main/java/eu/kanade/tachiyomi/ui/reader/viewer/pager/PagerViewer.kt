@@ -132,6 +132,7 @@ abstract class PagerViewer(
                 NavigationRegion.PREV -> moveToPrevious()
                 NavigationRegion.RIGHT -> moveRight()
                 NavigationRegion.LEFT -> moveLeft()
+                NavigationRegion.NONE -> {}
             }
         }
         pager.longTapListener = f@{
