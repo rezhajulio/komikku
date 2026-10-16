@@ -53,10 +53,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
-import java.util.concurrent.atomic.AtomicBoolean
 
 open class ImageViewerState(var isVertical: Boolean = false, var isReversed: Boolean = false) {
     val renderer = WebGpuRenderer()
