@@ -227,9 +227,26 @@ private fun ColumnScope.WebGpuViewerSettings(screenModel: ReaderSettingsScreenMo
             pref = screenModel.preferences.navigateToPan(),
         )
 
+        val bubbleZoom by screenModel.preferences.bubbleZoom().collectAsState()
         CheckboxItem(
             label = stringResource(KMR.strings.pref_bubble_zoom),
             pref = screenModel.preferences.bubbleZoom(),
+        )
+        if (bubbleZoom) {
+            val gesture by screenModel.preferences.bubbleZoomGesture().collectAsState()
+            SettingsChipRow(KMR.strings.pref_bubble_zoom_gesture) {
+                ReaderPreferences.BubbleZoomGesture.entries.forEach {
+                    FilterChip(
+                        selected = it == gesture,
+                        onClick = { screenModel.preferences.bubbleZoomGesture().set(it) },
+                        label = { Text(stringResource(it.titleRes)) },
+                    )
+                }
+            }
+        }
+        CheckboxItem(
+            label = stringResource(KMR.strings.pref_panel_zoom),
+            pref = screenModel.preferences.panelZoom(),
         )
 
         val transitionAnimation by screenModel.preferences.transitionAnimation().collectAsState()

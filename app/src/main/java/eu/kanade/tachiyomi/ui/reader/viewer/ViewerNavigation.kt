@@ -7,6 +7,7 @@ import dev.icerock.moko.resources.StringResource
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.util.lang.invert
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import uy.kohesive.injekt.injectLazy
 
 abstract class ViewerNavigation {
@@ -17,6 +18,9 @@ abstract class ViewerNavigation {
         data object NEXT : NavigationRegion(MR.strings.nav_zone_next, Color.argb(0xCC, 0x84, 0xE2, 0x96))
         data object LEFT : NavigationRegion(MR.strings.nav_zone_left, Color.argb(0xCC, 0x7D, 0x11, 0x28))
         data object RIGHT : NavigationRegion(MR.strings.nav_zone_right, Color.argb(0xCC, 0xA6, 0xCF, 0xD5))
+
+        /** A tap does nothing here - for a layout that leaves the page to other gestures. */
+        data object NONE : NavigationRegion(KMR.strings.nav_zone_none, Color.argb(0x66, 0x80, 0x80, 0x80))
     }
 
     data class Region(
