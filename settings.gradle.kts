@@ -36,10 +36,13 @@ dependencyResolutionManagement {
         google()
         maven(url = "https://www.jitpack.io")
         // KMK -->
-        // androidx.webgpu isn't on Google's Maven yet - the build :webgpuviewer's upstream uses.
+        // androidx.webgpu isn't on Google's Maven yet. It is carried in-tree, pinned: the build
+        // :webgpuviewer's upstream uses republished its 1.0.0-dev06 in place with a native library
+        // that no longer matched its classes, and every build after that shipped a reader that
+        // couldn't start. See gradle/vendor/README.md.
         exclusiveContent {
             forRepository {
-                maven(url = "https://raw.githubusercontent.com/mpreg-ca/androidx-webgpu-repo/main")
+                maven(url = rootDir.resolve("gradle/vendor"))
             }
             filter { includeGroup("androidx.webgpu") }
         }

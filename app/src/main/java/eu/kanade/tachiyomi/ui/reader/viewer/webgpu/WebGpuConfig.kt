@@ -86,6 +86,11 @@ class WebGpuConfig(
     var doubleTapZoom = true
         private set
 
+    var pageTurnSound = false
+        private set
+
+    var pageTurnSoundChangedListener: (() -> Unit)? = null
+
     /** Double tap to zoom, and how fast it zooms - see [ViewerConfig.doubleTapAnimDuration]. */
     var doubleTapChangedListener: (() -> Unit)? = null
 
@@ -205,6 +210,8 @@ class WebGpuConfig(
         readerPreferences.doubleTapAnimSpeed().changes().drop(1)
             .onEach { doubleTapChangedListener?.invoke() }
             .launchIn(scope)
+
+        readerPreferences.pageTurnSound().register({ pageTurnSound = it }, { pageTurnSoundChangedListener?.invoke() })
 
         // "Animate page transitions" off turns every transition into a cut - see WebGpuViewer.
         (if (continuous) readerPreferences.pageTransitionsWebtoon() else readerPreferences.pageTransitionsPager())

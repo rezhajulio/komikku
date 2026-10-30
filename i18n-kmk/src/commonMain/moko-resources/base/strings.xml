@@ -256,6 +256,10 @@
     <string name="bubble_zoom_gesture_long_press">Long press</string>
     <string name="pref_panel_zoom">Zoom to panel</string>
     <string name="pref_panel_zoom_summary">The bubble gesture on artwork zooms to the panel under it. Where no panel is found, it zooms in as usual</string>
+    <string name="pref_cover_screen_cover">Cover on the cover screen</string>
+    <string name="pref_cover_screen_cover_summary">While the phone lies open, its outer screen shows the cover of what you\'re reading, like a book. Needs a foldable on Android 14 or newer that offers its outer screen to apps</string>
+    <string name="pref_page_turn_sound">Page turn sound</string>
+    <string name="pref_page_turn_sound_summary">A soft paper flip on every page turn. Follows the system sound volume, so silent mode mutes it</string>
     <string name="bottom_menu_nav">Bottom edge menu</string>
     <string name="nav_zone_none">Nothing</string>
     <string name="action_shift_spread">Shift spread pages</string>
