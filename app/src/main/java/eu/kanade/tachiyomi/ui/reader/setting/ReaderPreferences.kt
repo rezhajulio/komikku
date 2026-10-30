@@ -23,6 +23,9 @@ class ReaderPreferences(
     fun pageTransitionsWebtoon() = preferenceStore.getBoolean("pref_enable_transitions_webtoon_key", true)
     // SY <--
 
+    /** The cover of what you're reading on the phone's cover screen while it lies open. */
+    fun coverScreenCover() = preferenceStore.getBoolean("pref_cover_screen_cover", false)
+
     fun flashOnPageChange() = preferenceStore.getBoolean("pref_reader_flash", false)
 
     fun flashDurationMillis() = preferenceStore.getInt("pref_reader_flash_duration", MILLI_CONVERSION)
@@ -232,6 +235,9 @@ class ReaderPreferences(
 
     /** The bubble gesture on artwork zooms to the panel under it rather than in by a step. */
     fun panelZoom() = preferenceStore.getBoolean("webgpu_panel_zoom", false)
+
+    /** A soft paper flip on every page turn. */
+    fun pageTurnSound() = preferenceStore.getBoolean("webgpu_page_turn_sound", false)
 
     fun cutoutModeDual() = preferenceStore.getEnum("webgpu_dual_cutout_mode", CutoutMode.IGNORE)
 

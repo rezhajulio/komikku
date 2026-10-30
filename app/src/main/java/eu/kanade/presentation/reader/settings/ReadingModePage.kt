@@ -248,6 +248,10 @@ private fun ColumnScope.WebGpuViewerSettings(screenModel: ReaderSettingsScreenMo
             label = stringResource(KMR.strings.pref_panel_zoom),
             pref = screenModel.preferences.panelZoom(),
         )
+        CheckboxItem(
+            label = stringResource(KMR.strings.pref_page_turn_sound),
+            pref = screenModel.preferences.pageTurnSound(),
+        )
 
         val transitionAnimation by screenModel.preferences.transitionAnimation().collectAsState()
         SettingsChipRow(KMR.strings.pref_transition_animation) {
