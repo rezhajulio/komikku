@@ -79,7 +79,7 @@ class CoverScreenCover(
                                 area = info
                                 info?.let { it.getCapability(OPERATION).status }
                             },
-                        readerPreferences.coverScreenCover.changes(),
+                        readerPreferences.coverScreenCover().changes(),
                         activity.viewModel.state.map { it.manga?.asMangaCover() }.distinctUntilChanged(),
                     ) { status, enabled, cover -> Triple(status, enabled, cover) }
                         .catch { logcat(LogPriority.WARN, it) { "Cover screen availability failed" } }
