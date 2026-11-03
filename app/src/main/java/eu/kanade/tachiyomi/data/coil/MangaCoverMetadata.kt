@@ -8,7 +8,10 @@ import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.coil.MangaCoverMetadata.setRatioAndColors
 import eu.kanade.tachiyomi.ui.manga.MangaScreenModel
 import eu.kanade.tachiyomi.util.SamsungImageDecoder
+import kotlinx.coroutines.CancellationException
+import logcat.LogPriority
 import okio.BufferedSource
+import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.MangaCover
 import uy.kohesive.injekt.injectLazy
@@ -126,14 +129,28 @@ object MangaCoverMetadata {
             ?: coverCache.getCustomCoverFile(mangaCover.mangaId).takeIf { it.exists() }
             ?: coverCache.getCoverFile(mangaCover.url)
 
-        val bitmap = when {
-            bufferedSource != null -> decodeBitmap(bufferedSource.inputStream(), options)
-            // if the file exists and the there was still an error then the file is corrupted
-            file?.exists() == true -> decodeBitmap(file, options)
-            else -> {
-                return
+        // KMK -->
+        // Some OEM decoders (e.g. MediaTek's DcfDecoder hook inside BitmapFactory) can throw
+        // IllegalStateException while reading a network/disk stream, which used to propagate out
+        // of this coroutine and crash the whole process. Cover color is purely decorative, so any
+        // decode failure must only skip the palette for this single cover. The Samsung path
+        // inside decodeBitmap() is unaffected: it never touches BitmapFactory.
+        val bitmap = try {
+            when {
+                bufferedSource != null -> decodeBitmap(bufferedSource.inputStream(), options)
+                // if the file exists and the there was still an error then the file is corrupted
+                file?.exists() == true -> decodeBitmap(file, options)
+                else -> {
+                    return
+                }
             }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e) { "Failed to decode cover for color/ratio: ${mangaCover.url ?: file?.name}" }
+            return
         }
+        // KMK <--
 
         if (bitmap != null) {
             Palette.from(bitmap).generate {
