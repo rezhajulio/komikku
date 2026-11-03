@@ -78,7 +78,7 @@ class MangaCoverFetcher(
     // colour/ratio is purely cosmetic and must never take the library update down with it.
     private val scope by lazy {
         CoroutineScope(Dispatchers.IO + CoroutineExceptionHandler { _, throwable ->
-            logcat(LogPriority.ERROR, throwable) { "Failed to preload library cover color" }
+                logcat(LogPriority.ERROR, throwable) { "Failed to preload library cover color" }
         })
     }
     private val uiPreferences = Injekt.get<UiPreferences>()
